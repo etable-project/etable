@@ -38,10 +38,15 @@ const manifeste = join(principal, "AndroidManifest.xml");
 let xml = readFileSync(manifeste, "utf8");
 const internet = '<uses-permission android:name="android.permission.INTERNET" />';
 if (!xml.includes(internet)) echec("ligne INTERNET introuvable dans le manifeste : le gabarit de Tauri a changé.");
-for (const permission of ["SCHEDULE_EXACT_ALARM", "USE_EXACT_ALARM", "REQUEST_INSTALL_PACKAGES"]) {
+for (const permission of ["SCHEDULE_EXACT_ALARM", "USE_EXACT_ALARM", "REQUEST_INSTALL_PACKAGES", "CAMERA"]) {
   if (!xml.includes(`android.permission.${permission}`)) {
     xml = xml.replace(internet, `${internet}\n    <uses-permission android:name="android.permission.${permission}" />`);
   }
+}
+// L'appareil photo n'est pas obligatoire : l'application s'installe aussi sur un appareil sans caméra. Sans la permission CAMERA déclarée,
+// le champ « photo » du WebView n'ouvre pas l'appareil photo (wry le vérifie).
+if (!xml.includes("android.hardware.camera")) {
+  xml = xml.replace(internet, `\n    <uses-feature android:name="android.hardware.camera" android:required="false" />`);
 }
 writeFileSync(manifeste, xml);
 if ((xml.match(/EXACT_ALARM/g) ?? []).length < 2) echec("permissions d'alarme exacte non écrites.");

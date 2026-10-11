@@ -111,18 +111,22 @@
   }
   /* Téléphone : jamais un cadre posé par-dessus la page, mais une page entière. */
   @media (max-width: 640px) {
+    /* Le cadre remplit l'écran : hauteur exacte (le voile est fixe), le corps défile et le pied reste visible. Les barres du système sont déjà réservées par l'application. */
     .voile {
+      display: block;
       padding: 0;
-      place-items: stretch;
       background: var(--surface);
     }
     .fenetre {
+      box-sizing: border-box;
       height: 100%;
+      max-height: 100%;
       max-width: none !important;
+      overflow: hidden;
       border: 0;
       border-radius: 0;
       box-shadow: none;
-      padding: calc(14px + env(safe-area-inset-top, 0px)) 16px calc(16px + env(safe-area-inset-bottom, 0px));
+      padding: 14px 16px 16px;
     }
   }
   @keyframes fondu {
