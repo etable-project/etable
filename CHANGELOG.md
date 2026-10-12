@@ -22,6 +22,7 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Fixed
 
+- **Android update check: simple request to GitHub** (no cache option, no custom header), which avoids a refused CORS pre-check; a rate limit is now reported as such.
 - **Android: the camera button really opens the camera.** Android 11 and later hide the camera app from an app that does not declare it; the manifest now does (it used to fall back to the gallery).
 - **Phone: full-screen dialogs scroll** (the long ticket check could not be scrolled to its buttons) and no longer add a second top margin.
 - **Android: the *take a photo* button opens the camera** (the app now declares the camera permission).
