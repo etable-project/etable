@@ -48,6 +48,12 @@ for (const permission of ["SCHEDULE_EXACT_ALARM", "USE_EXACT_ALARM", "REQUEST_IN
 if (!xml.includes("android.hardware.camera")) {
   xml = xml.replace(internet, `\n    <uses-feature android:name="android.hardware.camera" android:required="false" />`);
 }
+// Android 11+ : sans « queries », l'application ne voit pas l'application appareil photo (resolveActivity renvoie null) et le champ
+// « photo » retombe sur la galerie. Le gabarit de Tauri n'en déclare aucune.
+if (!xml.includes("android.media.action.IMAGE_CAPTURE")) {
+  if (!xml.includes("<application")) echec("balise <application> introuvable dans le manifeste.");
+  xml = xml.replace("<application", `<queries>\n        <intent>\n            <action android:name="android.media.action.IMAGE_CAPTURE" />\n        </intent>\n    </queries>\n    <application`);
+}
 writeFileSync(manifeste, xml);
 if ((xml.match(/EXACT_ALARM/g) ?? []).length < 2) echec("permissions d'alarme exacte non écrites.");
 
