@@ -127,6 +127,8 @@ const PERMISSION_REQUISE: Record<string, string | null> = {
   openPage: null,
   reminders: "notifications",
   ai: "ia",
+  route: "trajets",
+  openMap: null,
   // La permission `appelle:<service>:<accès>` dépend du service : contrôlée plus bas, puis par le routage.
   serviceCall: null,
   serviceReady: null,
@@ -234,6 +236,17 @@ export function controler(brut: unknown, ctx: Contexte): Verdict {
         if (brut.schema !== undefined && !donneesValides(brut.schema)) return refus("schéma trop volumineux ou illisible");
         if (brut.recherche !== undefined && typeof brut.recherche !== "boolean") return refus("« recherche » doit valoir vrai ou faux");
         return bon({ type, id: brut.id, instruction: brut.instruction, ...(images ? { images } : {}), ...(brut.schema !== undefined ? { schema: brut.schema } : {}), ...(brut.recherche === true ? { recherche: true } : {}) });
+      }
+      case "route": {
+        if (!estTexte(brut.id, 64) || !ID_APPEL.test(brut.id)) return refus("identifiant de demande invalide");
+        if (!estTexte(brut.vers, 200) || brut.vers.trim() === "") return refus("adresse d'arrivée vide ou trop longue");
+        if (brut.depuis !== undefined && (!estTexte(brut.depuis, 200) || brut.depuis.trim() === "")) return refus("adresse de départ vide ou trop longue");
+        if (brut.arriveeAvant !== undefined && !(typeof brut.arriveeAvant === "number" && Number.isFinite(brut.arriveeAvant))) return refus("heure d'arrivée invalide");
+        return bon({ type, id: brut.id, vers: brut.vers, ...(brut.depuis !== undefined ? { depuis: brut.depuis } : {}), ...(brut.arriveeAvant !== undefined ? { arriveeAvant: brut.arriveeAvant } : {}) });
+      }
+      case "openMap": {
+        if (!estTexte(brut.destination, 200) || brut.destination.trim() === "") return refus("destination vide ou trop longue");
+        return bon({ type, destination: brut.destination });
       }
       case "serviceCall": {
         if (!estTexte(brut.id, 64) || !ID_APPEL.test(brut.id)) return refus("identifiant d'appel invalide");

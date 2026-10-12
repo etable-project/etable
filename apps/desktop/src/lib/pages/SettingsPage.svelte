@@ -18,6 +18,7 @@
   import ShortcutRecorder from "$lib/components/ShortcutRecorder.svelte";
   import Switch from "$lib/components/Switch.svelte";
   import IaSection from "./IaSection.svelte";
+  import TrajetsSection from "./TrajetsSection.svelte";
   import Tile from "$lib/components/Tile.svelte";
   import { PLUGINS, getPageByKey, pluginUrl } from "$lib/plugins/registry.svelte";
   import { openPluginSettings, pluginSection } from "$lib/pluginSettings";
@@ -55,6 +56,11 @@
       label: "Intelligence artificielle",
       title: "Intelligence artificielle",
       lead: "Votre clé Gemini, pour lire les tickets et proposer des repas. Elle reste sur cet appareil.",
+    },
+    trajets: {
+      label: "Trajets",
+      title: "Trajets",
+      lead: "Votre clé TomTom et votre adresse de départ, pour les temps de trajet avec la circulation.",
     },
     raccourcis: {
       label: "Raccourcis",
@@ -100,6 +106,7 @@
         "general",
         "apparence",
         ...(distribution.ia ? (["ia"] as const) : []),
+        ...(distribution.trajets ? (["trajets"] as const) : []),
         ...(api.capacites.fenetresNatives ? (["raccourcis"] as const) : []),
         "serveur",
         ...(estAdmin ? (["administration"] as const) : []),
@@ -470,6 +477,8 @@
           </div>
           <p class="hint">Pour changer l'ordre des pages, faites-les glisser dans la colonne de gauche.</p>
         </div>
+      {:else if active === "trajets"}
+        <TrajetsSection />
       {:else if active === "ia"}
         <IaSection />
       {:else if active === "raccourcis"}

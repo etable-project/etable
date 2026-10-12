@@ -137,7 +137,9 @@ export type HostToPlugin =
   /** Réponse du moteur à un message `reminders` de cette mini-app (ou de sa page `serviceEntry`). */
   | { type: "remindersResult"; id: string; result: RemindersResult }
   /** Réponse du moteur à un message `ai` de cette mini-app. */
-  | { type: "aiResult"; id: string; result: AiResult };
+  | { type: "aiResult"; id: string; result: AiResult }
+  /** Réponse du moteur à un message `route` de cette mini-app. */
+  | { type: "routeResult"; id: string; result: RouteResult };
 
 export type PluginToHost =
   | { type: "update"; data: unknown }
@@ -168,7 +170,11 @@ export type PluginToHost =
   | { type: "reminders"; id: string; op: "set"; items: Reminder[] }
   | { type: "reminders"; id: string; op: "state" }
   /** Demande à l'IA configurée par l'utilisateur (permission `ia`) : une consigne, éventuellement des photos, et la forme attendue de la réponse. */
-  | { type: "ai"; id: string; instruction: string; images?: AiImage[]; schema?: unknown; recherche?: boolean };
+  | { type: "ai"; id: string; instruction: string; images?: AiImage[]; schema?: unknown; recherche?: boolean }
+  /** Temps de trajet en voiture avec la circulation (permission `trajets`) : `vers` (adresse), `depuis` (sinon le départ des réglages), `arriveeAvant` (instant, ms). */
+  | { type: "route"; id: string; vers: string; depuis?: string; arriveeAvant?: number }
+  /** Ouvre Waze (ou son site) avec la destination déjà remplie. */
+  | { type: "openMap"; destination: string };
 
 /** Une photo envoyée à l'IA : le type de l'image et son contenu en base64 (sans « data: »). */
 export interface AiImage {
@@ -185,6 +191,10 @@ export type AiErrorCode = "non_configure" | "refuse" | "limite" | "reseau" | "bl
 
 /** Réponse de l'IA : le texte (du JSON quand un schéma est donné), ou la raison de l'échec en français. */
 export type AiResult = { ok: true; texte: string } | { ok: false; code: AiErrorCode; message: string };
+
+export type RouteErrorCode = "non_configure" | "introuvable" | "refuse" | "limite" | "reseau" | "erreur";
+/** Trajet calculé : minutes (circulation comprise) et distance en kilomètres. */
+export type RouteResult = { ok: true; minutes: number; distanceKm: number } | { ok: false; code: RouteErrorCode; message: string };
 
 /** Un rappel : une notification du téléphone à un instant précis (docs/24, A.1.5). Pas d'alarme : une notification seulement. */
 export interface Reminder {

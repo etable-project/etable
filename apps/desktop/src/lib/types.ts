@@ -10,6 +10,7 @@ export type SettingsSection =
   | "plugins"
   | "raccourcis"
   | "ia"
+  | "trajets"
   | "serveur"
   | "administration"
   | "alarmes"

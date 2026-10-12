@@ -5,18 +5,20 @@
     CONNECT,
     PROTOCOL_VERSION,
     type AiResult,
+    type RouteResult,
     type DocumentSnapshot,
     type HostToPlugin,
     type Incoming,
     type Parameters,
     type PluginToHost,
   } from "@etabli/sdk/protocol";
-  import { api } from "$lib/api";
+  import { api, system } from "$lib/api";
   import { distribution } from "$lib/distribution";
   import { demander } from "$lib/ia";
   import { traiterRappels } from "$lib/mobile/rappelsHote";
   import { frameShortcuts } from "$lib/shortcuts";
   import { sandboxDe, lireTheme } from "$lib/plugins/cadre";
+  import { calculerTrajet, urlWaze } from "$lib/trajets";
   import { controler, erreurService, idAppel, type Contexte } from "$lib/plugins/garde";
   import { connues, estStrict } from "$lib/plugins/permissions";
   import { getPlugin } from "$lib/plugins/registry.svelte";
@@ -149,6 +151,18 @@
           void reponse.then((result) => send({ type: "aiResult", id, result }));
           break;
         }
+        case "route": {
+          // Permission « trajets » déjà contrôlée par la garde ; seul l'hôte connaît la clé TomTom et parle au service.
+          const id = message.id;
+          const reponse = distribution.trajets
+            ? calculerTrajet({ vers: message.vers, depuis: message.depuis, arriveeAvant: message.arriveeAvant })
+            : Promise.resolve<RouteResult>({ ok: false, code: "non_configure", message: "Les trajets ne sont pas disponibles dans cette application." });
+          void reponse.then((result) => send({ type: "routeResult", id, result }));
+          break;
+        }
+        case "openMap":
+          void system.openUrl(urlWaze(message.destination));
+          break;
         case "reminders": {
           // Permission `notifications` déjà contrôlée par la garde ; seul l'hôte parle aux notifications natives.
           const id = message.id;

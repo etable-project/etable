@@ -21,6 +21,8 @@ export interface Distribution {
   apercu: "favoris" | "widgets";
   /** Intelligence artificielle : l'utilisateur peut y saisir sa clé (Paramètres) et les plugins qui ont la permission « ia » peuvent l'utiliser. La distribution doit aussi autoriser l'adresse de Google dans la CSP. */
   ia: boolean;
+  /** Trajets en voiture (clé TomTom de l'utilisateur dans Paramètres, permission `trajets` des plugins). La distribution doit autoriser l'adresse de TomTom dans la CSP. */
+  trajets: boolean;
   /** Barre d'onglets : faux, l'application n'a qu'une page à la fois et la barre ne montre que le titre de la page. */
   tabs: boolean;
   /** Icônes propres à la distribution, par nom (« calendrier ») : un plugin de la distribution peut les donner à ses pages. Même forme que le logo, mais remplies (`currentColor`). */
@@ -32,7 +34,7 @@ ull : pas de mise à jour sur Android. */
   androidUpdateUrl: string | null;
 }
 
-export const DISTRIBUTION_DEFAUT: Distribution = { name: "Établi", pluginsPage: true, themes: null, logo: null, logoPlein: false, logoViewBox: "0 0 24 24", accueilCouleur: null, apercu: "favoris", ia: false, tabs: true, icons: {}, tuilesNues: false, androidUpdateUrl: null };
+export const DISTRIBUTION_DEFAUT: Distribution = { name: "Établi", pluginsPage: true, themes: null, logo: null, logoPlein: false, logoViewBox: "0 0 24 24", accueilCouleur: null, apercu: "favoris", ia: false, trajets: false, tabs: true, icons: {}, tuilesNues: false, androidUpdateUrl: null };
 
 const objet = (v: unknown): Record<string, unknown> | null => (typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 const COULEUR = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\))$/i;
@@ -80,6 +82,7 @@ export function lireDistribution(brut: unknown): Distribution {
     accueilCouleur: typeof o.accueilCouleur === "string" && COULEUR.test(o.accueilCouleur.trim()) ? o.accueilCouleur.trim() : null,
     apercu: o.apercu === "widgets" ? "widgets" : "favoris",
     ia: o.ia === true,
+    trajets: o.trajets === true,
     tabs: o.tabs !== false,
     icons: lireIcones(o.icons),
     tuilesNues: o.tuilesNues === true,
