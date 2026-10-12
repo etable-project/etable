@@ -1,6 +1,8 @@
 // Jeu d'icônes de l'interface (Lucide). Les plugins désignent leurs icônes par ces noms.
 import {
   ArrowLeftRight,
+  Check,
+  Pencil,
   Bolt,
   ChevronDown,
   ChevronLeft,
@@ -54,6 +56,8 @@ import {
 
 export const ICONS = {
   home: House,
+  pencil: Pencil,
+  check: Check,
   sigma: Sigma,
   layers: Layers,
   hammer: Hammer,

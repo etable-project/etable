@@ -70,10 +70,7 @@
       {:else}
         <button class="carte" onclick={() => ouvrir(ref)}>
           <Tile color={ref.plugin.color} icon={ref.page.icon} size={40} />
-          <span class="texte">
-            <span class="nom">{ref.page.title}</span>
-            <span class="sous">{ref.plugin.name}</span>
-          </span>
+          <span class="texte"><span class="nom">{ref.page.title}</span></span>
           <Icon name="next" size={18} />
         </button>
       {/if}
@@ -87,7 +84,9 @@
       {#each pages as { ref, key } (key)}{@render carte(ref)}{/each}
     {/if}
     {#if pages.length > 1}
-      <button class="ordre" onclick={() => (reorganiser = !reorganiser)}>{reorganiser ? "Terminer" : "Modifier l'ordre"}</button>
+      <button class="ordre" class:actif={reorganiser} onclick={() => (reorganiser = !reorganiser)} aria-label={reorganiser ? "Terminer" : "Modifier l'ordre des pages"} title={reorganiser ? "Terminer" : "Modifier l'ordre"}>
+        <Icon name={reorganiser ? "check" : "pencil"} size={18} />
+      </button>
     {/if}
   </nav>
 
@@ -184,16 +183,22 @@
     font-size: 18px;
     font-weight: 700;
   }
+  /* Petit bouton rond avec un crayon (une coche pendant la modification). */
   .ordre {
     align-self: center;
+    width: 40px;
+    height: 40px;
     margin-top: 4px;
-    padding: 8px 16px;
+    display: grid;
+    place-items: center;
     border: 0;
     border-radius: 999px;
-    background: none;
+    background: var(--field);
     color: var(--muted);
-    font-size: 13px;
-    font-weight: 600;
+  }
+  .ordre.actif {
+    background: var(--accent);
+    color: var(--accent-text);
   }
   .categorie {
     padding: 8px 6px 0;
