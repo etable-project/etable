@@ -20,6 +20,7 @@ import {
   type AiImage,
   type AiResult,
   type RouteResult,
+  type WidgetSummary,
   type Reminder,
   type RemindersResult,
   type SavedFile,
@@ -58,6 +59,7 @@ export type {
   AiImage,
   AiResult,
   RouteResult,
+  WidgetSummary,
   RemindersResult,
   RemindersState,
   SavedFile,
@@ -164,6 +166,13 @@ export interface Etabli<T> {
    * Ne jette jamais : `{ ok: true, texte }` ou `{ ok: false, code, message }` (service non configuré, clé refusée, limite atteinte…).
    */
   /** Trajets en voiture (permission `trajets`) : le moteur calcule avec la clé TomTom de l'utilisateur ; Waze s'ouvre sans permission. */
+  /**
+   * Widgets : le résumé du widget affiché (titre, grand chiffre, lignes, page à ouvrir), que le téléphone montre sur son écran
+   * d'accueil. À appeler à chaque changement des données ; sans effet hors d'un widget (`#widget=` absent de l'adresse).
+   */
+  readonly widgets: {
+    resume(resume: WidgetSummary): void;
+  };
   readonly trajets: {
     calculer(options: { vers: string; depuis?: string; arriveeAvant?: number }): Promise<RouteResult>;
     ouvrirWaze(destination: string): void;
@@ -399,6 +408,12 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
       set: (items) => askReminders({ op: "set", items: JSON.parse(JSON.stringify(items)) }),
       clear: () => askReminders({ op: "set", items: [] }),
       state: () => askReminders({ op: "state" }),
+    },
+    widgets: {
+      resume: (resume) => {
+        const widget = /^#widget=([a-z0-9-]+)/.exec(location.hash)?.[1];
+        if (widget) send({ type: "widgetSummary", widget, resume: JSON.parse(JSON.stringify(resume)) });
+      },
     },
     trajets: {
       calculer: (options) => askRoute(options),

@@ -174,7 +174,9 @@ export type PluginToHost =
   /** Temps de trajet en voiture avec la circulation (permission `trajets`) : `vers` (adresse), `depuis` (sinon le départ des réglages), `arriveeAvant` (instant, ms). */
   | { type: "route"; id: string; vers: string; depuis?: string; arriveeAvant?: number }
   /** Ouvre Waze (ou son site) avec la destination déjà remplie. */
-  | { type: "openMap"; destination: string };
+  | { type: "openMap"; destination: string }
+  /** Résumé d'un widget, pour l'écran d'accueil du téléphone (widget Android au modèle commun). */
+  | { type: "widgetSummary"; widget: string; resume: WidgetSummary };
 
 /** Une photo envoyée à l'IA : le type de l'image et son contenu en base64 (sans « data: »). */
 export interface AiImage {
@@ -191,6 +193,15 @@ export type AiErrorCode = "non_configure" | "refuse" | "limite" | "reseau" | "bl
 
 /** Réponse de l'IA : le texte (du JSON quand un schéma est donné), ou la raison de l'échec en français. */
 export type AiResult = { ok: true; texte: string } | { ok: false; code: AiErrorCode; message: string };
+
+/** Ce qu'affiche un widget sur l'écran d'accueil du téléphone : un titre, un grand chiffre facultatif, quelques lignes, la page à ouvrir. */
+export interface WidgetSummary {
+  titre: string;
+  valeur?: string;
+  lignes?: string[];
+  /** Page du plugin à ouvrir au toucher. */
+  page?: string;
+}
 
 export type RouteErrorCode = "non_configure" | "introuvable" | "refuse" | "limite" | "reseau" | "erreur";
 /** Trajet calculé : minutes (circulation comprise) et distance en kilomètres. */

@@ -31,9 +31,31 @@ import androidx.webkit.WebViewFeature
  * « ipc ». La retirer dans le crochet ne retirerait rien : le remplacement part une fois la création finie.
  */
 class MainActivity : TauriActivity() {
+  /** Vue de l'application, et page à ouvrir quand un widget de l'écran d'accueil a été touché. */
+  private var vue: WebView? = null
+  private var pageAOuvrir: String? = null
+
+  /** L'application ouvre la page « plugin:page » (événement écouté par App.svelte). */
+  private fun ouvrirPage(page: String, delaiMs: Long) {
+    val v = vue
+    if (v == null) {
+      pageAOuvrir = page
+      return
+    }
+    val sure = page.filter { it.isLetterOrDigit() || it == ':' || it == '-' }
+    v.postDelayed({ v.evaluateJavascript("window.dispatchEvent(new CustomEvent('etable:ouvrir', { detail: '$sure' }))", null) }, delaiMs)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    intent.getStringExtra("etable_page")?.let { ouvrirPage(it, 400) }
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    pageAOuvrir = intent?.getStringExtra("etable_page")
     // Android 15 impose l'affichage bord à bord : sans cela, la barre de l'application passe sous l'heure et la barre d'état.
     // Le contenu est donc décalé de la hauteur des barres système (et de l'encoche éventuelle).
     ViewCompat.setOnApplyWindowInsetsListener(findViewById<View>(android.R.id.content)) { vue, insets ->
@@ -95,6 +117,16 @@ class MainActivity : TauriActivity() {
       WebViewCompat.addWebMessageListener(webView, "etabliInstaller", setOf("http://tauri.localhost")) { _, message, _, isMainFrame, _ ->
         val adresse = message.data
         if (isMainFrame && adresse != null) telechargerEtInstaller(adresse)
+      }
+      // Widgets de l'écran d'accueil : l'application envoie le catalogue et les résumés (WidgetEtable.kt).
+      WebViewCompat.addWebMessageListener(webView, "etabliWidgets", setOf("http://tauri.localhost")) { _, message, _, isMainFrame, _ ->
+        val donnees = message.data
+        if (isMainFrame && donnees != null) WidgetEtable.recevoir(this, donnees)
+      }
+      vue = webView
+      pageAOuvrir?.let {
+        pageAOuvrir = null
+        ouvrirPage(it, 2500)
       }
       // Le premier document a été chargé avec l'ancienne interface : on recharge pour que l'application utilise la nouvelle.
       webView.reload()
