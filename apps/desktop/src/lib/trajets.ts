@@ -30,7 +30,7 @@ export async function calculerTrajet(demande: { vers: string; depuis?: string; a
   const pb = lirePosition(b.corps);
   if (!pa) return { ok: false, code: "introuvable", message: `Adresse de départ introuvable : « ${depuis} ».` };
   if (!pb) return { ok: false, code: "introuvable", message: `Adresse introuvable : « ${demande.vers} ».` };
-  const t = await json(urlTrajet(config.cle, pa, pb, Date.now(), demande.arriveeAvant));
+  const t = await json(urlTrajet(config.cle, pa, pb, Date.now(), demande.arriveeAvant, config.sansPeage));
   if (t.statut !== 200) return erreurHttp(t.statut);
   const trajet = lireTrajet(t.corps);
   return trajet ? { ok: true, ...trajet } : { ok: false, code: "erreur", message: "TomTom n'a pas trouvé de trajet en voiture." };

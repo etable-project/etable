@@ -5,9 +5,11 @@ export interface ConfigTrajets {
   cle: string;
   /** Adresse de départ par défaut (le domicile). */
   depart: string;
+  /** Éviter les autoroutes et routes à péage. */
+  sansPeage: boolean;
 }
 
-export const CONFIG_TRAJETS_DEFAUT: ConfigTrajets = { cle: "", depart: "" };
+export const CONFIG_TRAJETS_DEFAUT: ConfigTrajets = { cle: "", depart: "", sansPeage: false };
 export const TOMTOM = "https://api.tomtom.com";
 
 export type ResultatTrajet =
@@ -24,7 +26,7 @@ export function lireConfigTrajets(brut: unknown): ConfigTrajets {
   const o = objet(brut);
   const cle = typeof o?.cle === "string" ? o.cle.replace(/[\s\u200b-\u200d\u2060\ufeff"'`«»]/g, "") : "";
   const depart = typeof o?.depart === "string" ? o.depart.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 200) : "";
-  return { cle: /^[A-Za-z0-9._-]{10,200}$/.test(cle) ? cle : "", depart };
+  return { cle: /^[A-Za-z0-9._-]{10,200}$/.test(cle) ? cle : "", depart, sansPeage: o?.sansPeage === true };
 }
 
 export const urlGeocodage = (cle: string, adresse: string): string =>
@@ -40,9 +42,9 @@ export function lirePosition(json: unknown): { lat: number; lon: number } | null
  * Trajet en voiture avec la circulation. `arriveeAvant` (instant, ms) : l'heure à laquelle il faut être arrivé, si elle est à venir ;
  * sinon on part maintenant.
  */
-export function urlTrajet(cle: string, a: { lat: number; lon: number }, b: { lat: number; lon: number }, maintenant: number, arriveeAvant?: number): string {
+export function urlTrajet(cle: string, a: { lat: number; lon: number }, b: { lat: number; lon: number }, maintenant: number, arriveeAvant?: number, sansPeage = false): string {
   const quand = arriveeAvant !== undefined && arriveeAvant > maintenant + 60_000 ? `arriveAt=${encodeURIComponent(new Date(arriveeAvant).toISOString())}` : "departAt=now";
-  return `${TOMTOM}/routing/1/calculateRoute/${a.lat},${a.lon}:${b.lat},${b.lon}/json?key=${encodeURIComponent(cle)}&traffic=true&travelMode=car&${quand}`;
+  return `${TOMTOM}/routing/1/calculateRoute/${a.lat},${a.lon}:${b.lat},${b.lon}/json?key=${encodeURIComponent(cle)}&traffic=true&travelMode=car&${quand}${sansPeage ? "&avoid=tollRoads" : ""}`;
 }
 
 export function lireTrajet(json: unknown): { minutes: number; distanceKm: number } | null {

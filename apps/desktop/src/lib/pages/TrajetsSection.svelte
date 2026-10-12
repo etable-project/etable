@@ -6,6 +6,7 @@
   const depart0 = configTrajets();
   let cle = $state("");
   let depart = $state(depart0.depart);
+  let sansPeage = $state(depart0.sansPeage);
   let enregistree = $state(depart0.cle !== "");
   let essaiVers = $state("");
   let message = $state("");
@@ -15,7 +16,7 @@
   const cleEffective = (): string => (cle.trim() !== "" ? cle.trim() : configTrajets().cle);
 
   function enregistrer(): void {
-    enregistrerConfigTrajets({ cle: cleEffective(), depart });
+    enregistrerConfigTrajets({ cle: cleEffective(), depart, sansPeage });
     const apres = configTrajets();
     enregistree = apres.cle !== "";
     cle = "";
@@ -26,7 +27,7 @@
   async function essayer(): Promise<void> {
     occupe = true;
     message = "";
-    const r = await calculerTrajet({ vers: essaiVers.trim() || depart }, { cle: cleEffective(), depart });
+    const r = await calculerTrajet({ vers: essaiVers.trim() || depart }, { cle: cleEffective(), depart, sansPeage });
     occupe = false;
     reussi = r.ok;
     message = r.ok ? `Trajet trouvé : ${r.minutes} min avec la circulation actuelle, ${r.distanceKm.toLocaleString("fr-FR")} km.` : r.message;
@@ -45,6 +46,7 @@
       Adresse de départ (domicile)
       <input class="text-input" bind:value={depart} placeholder="12 rue des Lilas, 69003 Lyon" autocomplete="street-address" />
     </label>
+    <label class="case"><input type="checkbox" bind:checked={sansPeage} /> Éviter les péages</label>
     <label>
       Essayer vers une adresse
       <input class="text-input" bind:value={essaiVers} placeholder="Gare de la Part-Dieu, Lyon" autocomplete="off" />
@@ -74,6 +76,11 @@
     gap: 6px;
     font-size: 13px;
     font-weight: 600;
+  }
+  .champs label.case {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
   }
   .buttons {
     display: flex;
