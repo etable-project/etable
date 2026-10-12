@@ -48,7 +48,7 @@ export function idAppel(brut: unknown): string | null {
 }
 
 /** Extensions qu'une mini-app peut proposer à « Enregistrer sous » : jamais un programme ni un script. */
-export const EXTENSIONS_FICHIER: ReadonlySet<string> = new Set(["csv", "tsv", "dxf", "json", "txt", "svg", "md", "xml", "ics"]);
+export const EXTENSIONS_FICHIER: ReadonlySet<string> = new Set(["csv", "tsv", "dxf", "json", "txt", "svg", "md", "xml", "ics", "pdf"]);
 
 export interface Contexte {
   /** Permissions déclarées dans le manifeste (déjà filtrées sur les permissions connues). */
