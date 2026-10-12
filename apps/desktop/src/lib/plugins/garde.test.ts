@@ -148,6 +148,14 @@ describe("autres messages", () => {
     expect(controler({ type: "openSettings", plugin: "machines", hash: "add=scie" }, strict(["reglages"])).ok).toBe(true);
     expect(controler({ type: "send", kind: "Pièce Plate", data: {} }, strict(["envoi"])).ok).toBe(false);
   });
+
+  it("coupe un résumé de widget trop long au lieu de le refuser", () => {
+    const v = controler({ type: "widgetSummary", widget: "paiements", resume: { titre: "t".repeat(70), valeur: "v".repeat(50), lignes: Array.from({ length: 7 }, () => "l".repeat(90)) } }, strict());
+    expect(v.ok).toBe(true);
+    const r = (v as { message: { resume: { titre: string; valeur: string; lignes: string[] } } }).message.resume;
+    expect([r.titre.length, r.valeur.length, r.lignes.length, r.lignes[0].length]).toEqual([60, 40, 5, 80]);
+    expect(controler({ type: "widgetSummary", widget: "x", resume: { titre: 3 } }, strict()).ok).toBe(false);
+  });
 });
 
 describe("permissions du manifeste", () => {

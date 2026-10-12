@@ -248,11 +248,14 @@ export function controler(brut: unknown, ctx: Contexte): Verdict {
       case "widgetSummary": {
         const r = estObjet(brut.resume) ? brut.resume : null;
         if (!estTexte(brut.widget, 40) || !/^[a-z0-9-]+$/.test(brut.widget)) return refus("identifiant de widget invalide");
-        if (!r || !estTexte(r.titre, 60)) return refus("titre du résumé absent ou trop long");
-        if (r.valeur !== undefined && !estTexte(r.valeur, 40)) return refus("valeur du résumé trop longue");
+        // Texte trop long : coupé plutôt que refusé, sinon le widget du téléphone reste vide.
+        const couper = (t: string, max: number) => (t.length > max ? `${t.slice(0, max - 1)}…` : t);
+        if (!r || typeof r.titre !== "string" || r.titre.length > 2000) return refus("titre du résumé absent ou illisible");
+        if (r.valeur !== undefined && (typeof r.valeur !== "string" || r.valeur.length > 2000)) return refus("valeur du résumé illisible");
         if (r.page !== undefined && (!estTexte(r.page, 64) || !/^[a-z0-9-]+$/.test(r.page))) return refus("page du résumé invalide");
-        if (r.lignes !== undefined && (!Array.isArray(r.lignes) || r.lignes.length > 5 || !r.lignes.every((l) => estTexte(l, 80)))) return refus("au plus 5 lignes de 80 caractères");
-        return bon({ type, widget: brut.widget, resume: { titre: r.titre, ...(r.valeur !== undefined ? { valeur: r.valeur } : {}), ...(r.lignes !== undefined ? { lignes: [...(r.lignes as string[])] } : {}), ...(r.page !== undefined ? { page: r.page } : {}) } });
+        if (r.lignes !== undefined && (!Array.isArray(r.lignes) || r.lignes.length > 50 || !r.lignes.every((l) => typeof l === "string" && l.length <= 2000))) return refus("lignes du résumé illisibles");
+        const lignes = r.lignes === undefined ? undefined : (r.lignes as string[]).slice(0, 5).map((l) => couper(l, 80));
+        return bon({ type, widget: brut.widget, resume: { titre: couper(r.titre, 60), ...(r.valeur !== undefined ? { valeur: couper(r.valeur as string, 40) } : {}), ...(lignes ? { lignes } : {}), ...(r.page !== undefined ? { page: r.page } : {}) } });
       }
       case "openMap": {
         if (!estTexte(brut.destination, 200) || brut.destination.trim() === "") return refus("destination vide ou trop longue");
