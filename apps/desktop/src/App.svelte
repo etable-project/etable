@@ -3,6 +3,7 @@
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import MobileAccueil from "$lib/components/MobileAccueil.svelte";
   import MobileBar from "$lib/components/MobileBar.svelte";
+  import WidgetsAndroid from "$lib/components/WidgetsAndroid.svelte";
   import PluginDialog from "$lib/components/PluginDialog.svelte";
   import SynchroBanner from "$lib/components/SynchroBanner.svelte";
   import Sidebar from "$lib/components/Sidebar.svelte";
@@ -20,7 +21,7 @@
   import { ecouter } from "$lib/serveur/evenements";
   import { pluginData } from "$lib/state/pluginData.svelte";
   import { synchro } from "$lib/state/synchro.svelte";
-  import { estBureau } from "$lib/plateforme";
+  import { estAndroid, estBureau } from "$lib/plateforme";
   import { preparerPluginsHorsLigne } from "$lib/serveur/horsLigne";
   import { applyAppearance } from "$lib/appearance";
   import { openPluginSettings } from "$lib/pluginSettings";
@@ -57,6 +58,16 @@
     if (!estBureau) return;
     const s = untrack(() => $state.snapshot(settings.quickShortcut));
     void system.setShortcut(s.accelerator).then(() => settings.set("quickShortcut", s)).catch(() => {});
+  });
+
+  // Widget Android touché : MainActivity envoie « etable:ouvrir » avec « plugin:page ».
+  $effect(() => {
+    const ouvrir = (e: Event) => {
+      const [pluginId, pageId] = String((e as CustomEvent).detail ?? "").split(":");
+      if (pluginId && pageId) tabs.navigate({ kind: "page", pluginId, pageId });
+    };
+    window.addEventListener("etable:ouvrir", ouvrir);
+    return () => window.removeEventListener("etable:ouvrir", ouvrir);
   });
 
   $effect(() => applyAppearance());
@@ -175,6 +186,7 @@
   <CommandPalette />
 {/if}
 <PluginDialog />
+{#if estAndroid}<WidgetsAndroid />{/if}
 <Toast />
 <ServiceHost />
 

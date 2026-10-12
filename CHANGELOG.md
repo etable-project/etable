@@ -13,6 +13,7 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Added
 
+- **Android home-screen widgets**: plugin widgets publish a summary (`etabli.widgets.resume`: title, big value, a few lines, page to open); the app shows them as native Android widgets (pick one when placing it), in light and dark, and opens the page on tap.
 - **Travel times with live traffic**: plugins with the new `trajets` permission ask the host for a car route (TomTom, the user's own key and home address in *Settings → Trajets*, never seen by the plugin), and can open Waze with a destination. Enabled per distribution (`trajets: true`).
 - **Mini-apps can save PDF files** (`saveFile` with the `pdf` extension), for printable sheets such as an estimated payslip.
 - **The installed version is shown at the bottom of the phone home.**

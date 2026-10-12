@@ -79,3 +79,6 @@ defensively (`lib/distribution.ts`, tested): a missing or invalid field keeps Et
 | `icons` | Icons of the distribution by name (`calendrier`…), same shapes as the logo but filled (`currentColor`). A plugin of the distribution can then give a page `icon: "calendrier"`; the validator accepts these names when `ETABLE_DISTRIBUTION` is set |
 
 The application icon is separate: the distribution's `bundle.icon` in its Tauri configuration.
+## Home-screen widgets on Android
+
+Each plugin widget can publish a summary with `etabli.widgets.resume({ titre, valeur?, lignes?, page? })`. On Android the host runs every widget hidden (`WidgetsAndroid.svelte`) and passes the summaries and the catalogue to the native side (`android/WidgetEtable.kt`, bridge `etabliWidgets` limited to the app origin). The user places the *app* widget, picks which summary it shows, and a tap opens `page`. Colours come from `res/values/etable_widget.xml` and `values-night`: a distribution can ship its own (copied after `android init`). Summaries refresh while the app runs or syncs; the widget keeps the last one when the app is closed.
