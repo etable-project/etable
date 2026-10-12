@@ -106,7 +106,6 @@
         "general",
         "apparence",
         ...(distribution.ia ? (["ia"] as const) : []),
-        ...(distribution.trajets ? (["trajets"] as const) : []),
         ...(api.capacites.fenetresNatives ? (["raccourcis"] as const) : []),
         "serveur",
         ...(estAdmin ? (["administration"] as const) : []),
@@ -114,7 +113,7 @@
         "a-propos",
       ],
     },
-    { title: "Plugins", sections: ["plugins"] },
+    { title: "Plugins", sections: [...(distribution.trajets ? (["trajets"] as const) : []), "plugins"] },
   ];
 
   /**

@@ -14,6 +14,9 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 ### Fixed
 
 - **Android widgets stuck on "open the app"**: a widget summary with a too-long title, value or line is now shortened instead of dropped.
+- **Android widgets showing "Finances unavailable"**: hidden widgets now start one at a time, so their service calls no longer time out on a phone.
+- **Line charts on a phone**: drawn at their real width, so labels keep their normal size, and taller on narrow screens.
+- **Text fields in Settings → Trajets** now use the app style; *Trajets* moves to the *Plugins* group.
 
 ### Added
 
