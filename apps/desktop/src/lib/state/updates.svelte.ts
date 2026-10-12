@@ -64,7 +64,9 @@ class Updates {
   async #verifierAndroid(): Promise<void> {
     const adresse = distribution.androidUpdateUrl;
     if (!adresse) throw new Error("Aucune adresse de mise à jour pour Android.");
-    const reponse = await fetch(adresse, { cache: "no-store", headers: { accept: "application/vnd.github+json" } });
+    // Requête simple : ni `cache`, ni en-têtes à nous. Sinon le navigateur envoie d'abord une question préalable (CORS) que GitHub refuse.
+    const reponse = await fetch(adresse);
+    if (reponse.status === 403 || reponse.status === 429) throw new Error("GitHub limite les recherches depuis cette connexion : réessayez dans une heure.");
     if (!reponse.ok) throw new Error(`Recherche de mise à jour impossible (${reponse.status}).`);
     const release = (await reponse.json()) as { tag_name?: unknown; body?: unknown; assets?: { name?: unknown; browser_download_url?: unknown }[] };
     const actuelle = (await system.appInfo()).version;
