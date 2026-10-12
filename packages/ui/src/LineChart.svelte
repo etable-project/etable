@@ -11,12 +11,15 @@
     format?: (value: number) => string;
     /** Titre lu par les lecteurs d'écran et affiché dans l'info-bulle de synthèse. */
     title: string;
+    /** Hauteur en pixels ; défaut : 180, et plus haute sur un écran étroit (téléphone). */
     height?: number;
   }
 
-  let { points, format = String, title, height = 180 }: Props = $props();
+  let { points, format = String, title, height: hauteurDemandee }: Props = $props();
 
-  const W = 600;
+  // Dessinée à la largeur réelle : les textes gardent leur vraie taille au lieu de rétrécir avec la courbe.
+  let W = $state(600);
+  const height = $derived(hauteurDemandee ?? (W < 500 ? Math.round(W * 0.85) : 180));
   const marge = { haut: 10, droite: 12, bas: 22, gauche: 64 };
   let actif = $state<number | null>(null);
 
@@ -48,7 +51,7 @@
   const infobulle = $derived(actif === null || !points[actif] ? null : points[actif]);
 </script>
 
-<figure>
+<figure bind:clientWidth={null, (w) => (W = Math.max(200, w || 600))}>
   <!-- svelte-ignore a11y_no_noninteractive_tabindex, a11y_no_noninteractive_element_interactions -->
   <svg
     viewBox={`0 0 ${W} ${height}`}

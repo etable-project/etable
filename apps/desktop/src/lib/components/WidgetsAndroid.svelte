@@ -14,10 +14,13 @@
   const cle = (pluginId: string, widgetId: string) => `${pluginId}/${widgetId}`;
 
   // Démarrage différé : l'application s'affiche d'abord, les widgets se calculent ensuite.
+  // Un widget toutes les 2 s : lancés tous ensemble, leurs appels de service dépassaient le délai sur téléphone.
   let pret = $state(false);
+  let montes = $state(0);
   $effect(() => {
     const t = setTimeout(() => (pret = true), 3000);
-    return () => clearTimeout(t);
+    const pas = setInterval(() => pret && montes < widgets.length && montes++, 2000);
+    return () => (clearTimeout(t), clearInterval(pas));
   });
 
   $effect(() => {
@@ -36,7 +39,7 @@
 
 {#if pret && pont()}
   <div class="cache" aria-hidden="true">
-    {#each widgets as w (cle(w.plugin.id, w.widget.id))}
+    {#each widgets.slice(0, montes) as w (cle(w.plugin.id, w.widget.id))}
       <div class="cellule">
         <MiniAppFrame
           fill
