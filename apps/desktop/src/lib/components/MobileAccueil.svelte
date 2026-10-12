@@ -1,6 +1,7 @@
 <script lang="ts">
   // Accueil sur téléphone : comme une messagerie. Le nom de l'application en haut, la liste des pages au centre,
   // les paramètres en bas. Toucher une page l'ouvre en plein écran ; le retour (bouton ou geste) revient ici.
+  import { system } from "$lib/api";
   import { distribution } from "$lib/distribution";
   import { grouper } from "$lib/categories";
   import { allPages, pageKey, type PageRef } from "$lib/plugins/registry.svelte";
@@ -30,6 +31,11 @@
   );
 
   const dateDuJour = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  /** La version installée, toujours visible : on sait tout de suite si une mise à jour a bien été installée. */
+  let version = $state("");
+  $effect(() => {
+    void system.appInfo().then((i) => (version = i.version)).catch(() => {});
+  });
   const ouvrir = (ref: PageRef): void => tabs.navigate({ kind: "page", pluginId: ref.plugin.id, pageId: ref.page.id });
 </script>
 
@@ -68,6 +74,7 @@
       <span class="texte"><span class="nom">Paramètres</span><span class="sous">Apparence, serveur, plugins…</span></span>
       <Icon name="next" size={18} />
     </button>
+    {#if version}<p class="version">{distribution.name} {version}</p>{/if}
   </footer>
 </div>
 
@@ -160,6 +167,12 @@
     padding: 24px 18px;
     text-align: center;
     color: var(--muted);
+  }
+  .version {
+    margin: 6px 0 0;
+    text-align: center;
+    font-size: 12px;
+    color: var(--faint);
   }
   footer {
     flex: none;

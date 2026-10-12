@@ -13,6 +13,7 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Added
 
+- **The installed version is shown at the bottom of the phone home.**
 - **Android updates download and install from the app.** *Download* now asks Android to download the APK (progress in the notification) and opens the installer when it is done; the first time, Android asks to allow the app to install updates. Android always asks you to confirm the installation.
 - **Live sync between devices.** The server tells your other devices when a plugin's data changes (/api/evenements, server-sent events); the open page updates without leaving it.
 - **UI kit: camera and image icons** for the mini-apps.
