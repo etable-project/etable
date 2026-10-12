@@ -49,6 +49,7 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Changed
 
+- **Phone home: page names only** (no plugin name under each page), and a round pencil button to reorder the pages.
 - **Simpler settings**: *Application* (General, Appearance, AI, Shortcuts, Server, Administration, Alarms, About last), then *Plugins* (each plugin's settings, then Manage plugins); shorter names and descriptions.
 - **Phone home**: the logo lines up with the page icons and the date with their names; *Change order* lets you reorder the pages.
 - **Phone: a lone button inside a block is centred.**
