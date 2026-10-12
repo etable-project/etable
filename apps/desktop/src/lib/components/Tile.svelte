@@ -1,6 +1,7 @@
 <script lang="ts">
   // Tuile d'icône d'un plugin ou d'une mini-app : une icône de la liste fermée (lib/icons.ts) sur la
   // couleur du plugin. Pas d'émoji : un plugin indépendant n'a qu'un nom d'icône et une couleur à fournir.
+  import { distribution } from "$lib/distribution";
   import Icon from "./Icon.svelte";
 
   interface Props {
@@ -15,8 +16,9 @@
   let { color, icon, variant = "solid", size = 40 }: Props = $props();
 </script>
 
-<span class="tile {variant}" style:--c={color} style:--size="{size}px" aria-hidden="true">
-  <Icon name={icon} size={Math.round(size * 0.62)} />
+<!-- Distribution aux icônes en couleurs : le dessin seul, sans pastille. -->
+<span class="tile {distribution.tuilesNues ? 'nue' : variant}" style:--c={color} style:--size="{size}px" aria-hidden="true">
+  <Icon name={icon} size={Math.round(size * (distribution.tuilesNues ? 0.9 : 0.62))} />
 </span>
 
 <style>
@@ -35,6 +37,9 @@
   .soft {
     background: color-mix(in srgb, var(--c) 15%, transparent);
     color: var(--c);
+  }
+  .nue {
+    background: none;
   }
   .plain {
     background: var(--field);
