@@ -118,8 +118,8 @@
 
 {#if api.id === "web" || (api.id === "tauri" && !clientServeur)}
   <div class="box">
-
-
+    <h3>Se connecter au serveur</h3>
+    <p>Vos données restent sur cet appareil. Pour les retrouver sur tous vos appareils, connectez-vous à votre serveur {nomApp}.</p>
     <form class="champs" onsubmit={seConnecter}>
       <label>Adresse du serveur<input class="text-input" bind:value={adresse} placeholder="https://etabli.exemple.fr" oninput={() => (installe = null)} /></label>
       {#if installe === null}
@@ -185,7 +185,7 @@
     <div class="box">
       <h3>Données de cet appareil</h3>
       <p>
-
+        Avant la connexion, {nomApp} gardait sur cet appareil : <b>{a.documents} calcul(s)</b>, <b>{a.donnees} jeu(x) de réglages de plugins</b>
         {a.reglages ? "et vos réglages" : ""}. Vous pouvez les ajouter à votre compte.
       </p>
       <p class="hint">Rien n'est écrasé : ce qui existe déjà sur le serveur est gardé. Les données de cet appareil restent en place, comme sauvegarde.</p>

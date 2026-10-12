@@ -98,7 +98,7 @@
     port = undefined;
     ready = false;
     clearTimeout(readyTimer);
-    readyTimer = setTimeout(() => (ready = true), 1000);
+    readyTimer = setTimeout(() => (ready = true), 6000);
     const savedData = await pluginData.load(pluginId);
     // Le composant a pu être retiré pendant le chargement : plus de cadre à connecter.
     if (!frame) return;
@@ -244,21 +244,50 @@
   });
 </script>
 
-<iframe
-  bind:this={frame}
-  {src}
-  {title}
-  {sandbox}
-  allow="clipboard-write"
-  onload={connectFrame}
-  class:ready
-  style:height={fill ? "100%" : `${height}px`}
-></iframe>
+<!-- Tant que la page n'est pas prête (couleurs et données reçues), elle reste cachée et une roue de chargement tourne à sa place. -->
+<div class="cadre" style:height={fill ? "100%" : `${height}px`}>
+  <iframe bind:this={frame} {src} {title} {sandbox} allow="clipboard-write" onload={connectFrame} class:ready></iframe>
+  {#if !ready}<div class="chargement" role="status" aria-label="Chargement"><span class="roue"></span></div>{/if}
+</div>
 
 <style>
+  .cadre {
+    position: relative;
+  }
+  .chargement {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    pointer-events: none;
+    /* Pas de roue pour un chargement très court : elle n'apparaît qu'après un instant. */
+    animation: apparait 0.2s ease-out 0.25s both;
+  }
+  .roue {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    animation: tour 0.8s linear infinite;
+  }
+  @keyframes tour {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes apparait {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
   iframe {
     display: block;
     width: 100%;
+    height: 100%;
     border: 0;
     background: transparent;
     color-scheme: normal;

@@ -123,7 +123,7 @@
 </script>
 
 {#if !appels || api.id !== "serveur"}
-
+  <div class="box"><p>L'administration n'est disponible qu'en étant connecté à un serveur {nom} avec le compte administrateur.</p></div>
 {:else}
   <div class="onglets" role="tablist">
     {#each ONGLETS as o (o.id)}
@@ -214,7 +214,7 @@
         <button class="btn primary" onclick={() => fichierPlugin?.click()}>Installer un plugin (.etapl)…</button>
         <input bind:this={fichierPlugin} type="file" accept=".etapl,application/zip" hidden onchange={installerPaquet} />
       </div>
-
+      <p class="hint">La signature est vérifiée avant toute installation. Les utilisateurs voient le plugin à leur prochaine ouverture de {nom}.</p>
     </div>
   {:else if onglet === "journal"}
     <div class="box">

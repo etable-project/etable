@@ -78,14 +78,14 @@
 
 <main class="ecran">
   <form class="carte" onsubmit={valider}>
-
+    <div class="marque"><Logo size={40} /> <span>{nomApp}</span></div>
 
     {#if expiree}
       <h1>Votre session a expiré</h1>
       <p class="lead">Reconnectez-vous pour retrouver vos calculs. Ce qui n'a pas pu être envoyé est gardé sur cet appareil.</p>
     {:else if !verifie}
       <h1>Se connecter à un serveur</h1>
-
+      <p class="lead">Saisissez l'adresse du serveur {nomApp} de votre atelier, de votre classe ou de votre maison.</p>
     {:else if installe}
       <h1>Connexion</h1>
       <p class="lead">{memeOrigine ? `Ce serveur ${nomApp} demande un compte.` : `Serveur : ${url}`}</p>
@@ -122,7 +122,7 @@
         <button class="btn primary" type="button" disabled={occupe || !adresse.trim()} onclick={verifier}>{occupe ? "Recherche…" : "Continuer"}</button>
       {/if}
       {#if !expiree}
-
+        <button class="btn" type="button" onclick={utiliserSeul}>Utiliser {nomApp} seul sur cet appareil</button>
       {/if}
     </div>
     <p class="hint">Sans serveur, tout reste dans ce navigateur. Vous pourrez vous connecter plus tard (Paramètres → Serveur).</p>

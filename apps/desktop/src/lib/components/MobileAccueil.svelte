@@ -36,26 +36,47 @@
   $effect(() => {
     void system.appInfo().then((i) => (version = i.version)).catch(() => {});
   });
+  /** Mode « modifier l'ordre » : des flèches remplacent l'ouverture des pages ; l'ordre est le même que dans la colonne du PC. */
+  let reorganiser = $state(false);
+  function deplacer(key: string, sens: -1 | 1): void {
+    const ids = pages.map((p) => p.key);
+    const i = ids.indexOf(key);
+    const j = i + sens;
+    if (i < 0 || j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j]!, ids[i]!];
+    settings.setPageOrder(ids);
+  }
   const ouvrir = (ref: PageRef): void => tabs.navigate({ kind: "page", pluginId: ref.plugin.id, pageId: ref.page.id });
 </script>
 
 <div class="accueil">
   <header>
-    <div class="marque"><Logo size={34} /><h1>{distribution.name}</h1></div>
-    <p>{dateDuJour}</p>
+    <!-- Le logo s'aligne sur les icônes des pages (plus grand : ce n'est pas une page), la date sur leurs noms. -->
+    <Logo size={48} />
+    <p class="date">{dateDuJour}</p>
   </header>
 
   <nav aria-label="Pages">
     {#if !pages.length}<p class="vide">Aucune page : installez un plugin.</p>{/if}
     {#snippet carte(ref: PageRef)}
-      <button class="carte" onclick={() => ouvrir(ref)}>
-        <Tile color={ref.plugin.color} icon={ref.page.icon} size={40} />
-        <span class="texte">
-          <span class="nom">{ref.page.title}</span>
-          <span class="sous">{ref.plugin.name}</span>
-        </span>
-        <Icon name="next" size={18} />
-      </button>
+      {@const key = pageKey(ref.plugin.id, ref.page.id)}
+      {#if reorganiser}
+        <div class="carte">
+          <Tile color={ref.plugin.color} icon={ref.page.icon} size={40} />
+          <span class="texte"><span class="nom">{ref.page.title}</span></span>
+          <button class="fleche" onclick={() => deplacer(key, -1)} aria-label="Monter {ref.page.title}">↑</button>
+          <button class="fleche" onclick={() => deplacer(key, 1)} aria-label="Descendre {ref.page.title}">↓</button>
+        </div>
+      {:else}
+        <button class="carte" onclick={() => ouvrir(ref)}>
+          <Tile color={ref.plugin.color} icon={ref.page.icon} size={40} />
+          <span class="texte">
+            <span class="nom">{ref.page.title}</span>
+            <span class="sous">{ref.plugin.name}</span>
+          </span>
+          <Icon name="next" size={18} />
+        </button>
+      {/if}
     {/snippet}
     {#if settings.sidebarCategories}
       {#each groupes as g (g.name)}
@@ -64,6 +85,9 @@
       {/each}
     {:else}
       {#each pages as { ref, key } (key)}{@render carte(ref)}{/each}
+    {/if}
+    {#if pages.length > 1}
+      <button class="ordre" onclick={() => (reorganiser = !reorganiser)}>{reorganiser ? "Terminer" : "Modifier l'ordre"}</button>
     {/if}
   </nav>
 
@@ -84,39 +108,24 @@
     height: 100%;
     background: var(--surface);
   }
-  /* Le logo et le nom forment un bloc centré ; la date est centrée dessous. */
   header {
     flex: none;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 2px;
-    padding: calc(4px + env(safe-area-inset-top, 0px)) 16px 8px;
+    gap: 10px;
+    margin: 0 16px;
+    padding: 12px 15px 10px;
   }
-  /* Le nom est exactement au centre ; le logo se place à sa gauche sans le décaler. */
-  .marque {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    column-gap: 8px;
-  }
-  .marque > :global(:first-child) {
-    justify-self: end;
-  }
-  .marque :global(svg) {
+  header :global(svg) {
     display: block;
+    flex: none;
+    margin-left: -4px;
   }
-  h1 {
+  .date {
     margin: 0;
     font-size: 21px;
-    line-height: 1.1;
+    font-weight: 800;
     letter-spacing: -0.02em;
-  }
-  header p {
-    margin: 0;
-    font-size: 12.5px;
-    color: var(--muted);
     text-transform: capitalize;
   }
   nav {
@@ -164,6 +173,28 @@
     font-size: 12.5px;
     color: var(--muted);
   }
+  .fleche {
+    width: 40px;
+    height: 40px;
+    flex: none;
+    border: 0;
+    border-radius: 999px;
+    background: var(--field);
+    color: var(--text);
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .ordre {
+    align-self: center;
+    margin-top: 4px;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 999px;
+    background: none;
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
   .categorie {
     padding: 8px 6px 0;
     font-size: 11px;
@@ -185,6 +216,6 @@
   }
   footer {
     flex: none;
-    padding: 2px 16px calc(8px + env(safe-area-inset-bottom, 0px));
+    padding: 2px 16px 8px;
   }
 </style>

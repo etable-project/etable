@@ -15,7 +15,7 @@
 {#if visible}
   <div class="banner" role="status">
     {#if updates.status === "available"}
-
+      <span class="text"><b>{nom} {updates.version}</b> est disponible.</span>
       <button class="link" onclick={() => tabs.navigate({ kind: "settings", section: "a-propos" })}>Voir les nouveautés</button>
       <span class="spacer"></span>
       <button class="btn primary small" onclick={() => void updates.install()}>{estAndroid ? "Télécharger" : "Installer et redémarrer"}</button>

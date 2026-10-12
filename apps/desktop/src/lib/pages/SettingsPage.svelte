@@ -44,47 +44,47 @@
     general: {
       label: "Général",
       title: "Général",
-      lead: `Comment ${nom} se comporte avec Windows et où il enregistre vos données.`,
+      lead: "Démarrage, fermeture et emplacement de vos données.",
     },
     apparence: {
       label: "Apparence",
       title: "Apparence",
-      lead: "Couleurs, taille du texte et animations. Les mini-apps des plugins suivent ces réglages.",
+      lead: "Thème, taille du texte et animations.",
     },
     ia: {
       label: "Intelligence artificielle",
       title: "Intelligence artificielle",
-      lead: "Votre clé Gemini : lire un ticket en photo, proposer une liste de courses. Elle reste sur ce poste.",
+      lead: "Votre clé Gemini, pour lire les tickets et proposer des repas. Elle reste sur cet appareil.",
     },
     raccourcis: {
-      label: "Raccourcis clavier",
-      title: "Raccourcis clavier",
-      lead: "L'aperçu rapide (la petite fenêtre qui s'ouvre par-dessus n'importe quel logiciel) et les raccourcis de l'application. Aucun n'est réglé d'avance, sauf l'aperçu rapide.",
+      label: "Raccourcis",
+      title: "Raccourcis",
+      lead: "L'aperçu rapide et les raccourcis clavier de l'application.",
     },
     serveur: {
-      label: "Serveur et compte",
-      title: "Serveur et compte",
-      lead: `${nom} fonctionne seul sur cet appareil. Un serveur facultatif réunit vos calculs et ceux de votre équipe.`,
+      label: "Serveur",
+      title: "Serveur",
+      lead: "Votre compte et la synchronisation entre vos appareils.",
     },
     administration: {
       label: "Administration",
-      title: "Administration du serveur",
-      lead: "Comptes, plugins, journal et sauvegarde. Réservé à l'administrateur.",
+      title: "Administration",
+      lead: "Comptes, plugins et sauvegarde du serveur.",
     },
     alarmes: {
       label: "Alarmes",
-      title: "Alarmes du téléphone",
-      lead: "Vérifiez que les rappels sonnent à l'heure, application fermée.",
+      title: "Alarmes",
+      lead: "Vérifiez que les rappels sonnent à l'heure, même application fermée.",
     },
     plugins: {
-      label: "Plugins installés",
-      title: "Plugins installés",
-      lead: "Activez ou désactivez les plugins. Pour en ajouter ou en retirer, ouvrez la page des plugins.",
+      label: "Gérer les plugins",
+      title: "Gérer les plugins",
+      lead: "Activez ou désactivez les plugins.",
     },
     "a-propos": {
-      label: "Mises à jour et à propos",
-      title: "Mises à jour et à propos",
-      lead: `Version de ${nom}, recherche de mises à jour et liens du projet.`,
+      label: "À propos",
+      title: "À propos",
+      lead: "Version installée et mises à jour.",
     },
   };
 
@@ -92,12 +92,22 @@
   const connexion = lireConnexion();
   const estAdmin = api.id === "serveur" && connexion?.mode === "serveur" && connexion.utilisateur.role === "admin";
 
+  // Deux catégories : tout ce qui règle l'application (À propos en dernier), puis les réglages de chaque plugin.
   const GROUPS: { title: string; sections: FixedSection[] }[] = [
-    { title: "Application", sections: [...(api.capacites.fenetresNatives ? (["general", "apparence", "raccourcis"] as const) : (["general", "apparence"] as const)), ...(distribution.ia ? (["ia"] as const) : [])] },
-    { title: "Serveur", sections: estAdmin ? ["serveur", "administration"] : ["serveur"] },
-    ...(estNatif() ? [{ title: "Téléphone", sections: ["alarmes" as const] }] : []),
+    {
+      title: "Application",
+      sections: [
+        "general",
+        "apparence",
+        ...(distribution.ia ? (["ia"] as const) : []),
+        ...(api.capacites.fenetresNatives ? (["raccourcis"] as const) : []),
+        "serveur",
+        ...(estAdmin ? (["administration"] as const) : []),
+        ...(estNatif() ? (["alarmes"] as const) : []),
+        "a-propos",
+      ],
+    },
     { title: "Plugins", sections: ["plugins"] },
-    { title: "Aide", sections: ["a-propos"] },
   ];
 
   /**
@@ -286,14 +296,14 @@
     <nav class="sections" class:cache={ui.compact && !listeMobile} aria-label="Sections">
       {#each GROUPS as group (group.title)}
         <p class="group">{group.title}</p>
-        {#each group.sections as id (id)}
-          <button class:on={active === id && !listeMobile} onclick={() => goto(id)}>{SECTION_INFO[id].label}</button>
-        {/each}
         {#if group.title === "Plugins"}
           {#each PAGES as entry (entry.section)}
             <button class:on={active === entry.section && !listeMobile} onclick={() => goto(entry.section)}>{entry.title}</button>
           {/each}
         {/if}
+        {#each group.sections as id (id)}
+          <button class:on={active === id && !listeMobile} onclick={() => goto(id)}>{SECTION_INFO[id].label}</button>
+        {/each}
       {/each}
     </nav>
 
@@ -337,8 +347,8 @@
               aria-checked={settings.closeToTray}
               onclick={() => setCloseToTray(true)}
             >
-
-
+              <b>{nom} reste en arrière-plan</b>
+              <small>La fenêtre se ferme mais {nom} continue près de l'horloge : le raccourci de l'aperçu rapide reste disponible. Pour quitter, clic droit sur son icône → Quitter.</small>
             </button>
             <button
               class="choice"
@@ -347,8 +357,8 @@
               aria-checked={!settings.closeToTray}
               onclick={() => setCloseToTray(false)}
             >
-
-
+              <b>{nom} se ferme complètement</b>
+              <small>Fermer la fenêtre quitte l'application. L'aperçu rapide ne répond plus tant que {nom} n'est pas relancé.</small>
             </button>
           </div>
         </div>
@@ -360,7 +370,7 @@
               `Lancer ${nom} quand j'ouvre ma session Windows`,
               `${nom} démarre réduit près de l'horloge, sans ouvrir de fenêtre, prêt pour l'aperçu rapide.`,
             )}
-
+            <Switch checked={autostart} label="Lancer {nom} au démarrage de Windows" onchange={setAutostart} />
           </div>
         </div>
         {/if}
@@ -503,7 +513,7 @@
         </div>
         <div class="box">
           <div class="box-head">
-
+            <h3>Dans la fenêtre de {nom}</h3>
             <button class="btn" disabled={shortcutCount === 0} onclick={() => { for (const a of ACTIONS) settings.setShortcut(a.id, null); }}>
               Tout effacer
             </button>
@@ -557,18 +567,18 @@
       {:else}
         <div class="box">
           <h3>Mises à jour</h3>
-
+          <p>Version installée : {nom} <b>{info?.version ?? "…"}</b></p>
           {#if !api.capacites.miseAJour}
             <p class="hint">Mises à jour indisponibles dans l'aperçu navigateur.</p>
           {:else if updates.status === "available" || updates.status === "downloading" || updates.status === "installing"}
             <div class="update">
-
+              <p><b>{nom} {updates.version}</b> est disponible.</p>
               {#if updates.notes}<pre class="notes">{updates.notes}</pre>{/if}
               {#if updates.status === "available"}
                 <div class="buttons">
                   <button class="btn primary" onclick={() => void updates.install()}>{estAndroid ? "Télécharger" : "Installer et redémarrer"}</button>
                 </div>
-
+                <p class="hint">{nom} se ferme, s'installe et se relance : vos calculs sont déjà enregistrés.</p>
               {:else}
                 <p class="hint">
                   {updates.status === "installing"
@@ -584,7 +594,7 @@
               </button>
             </div>
             {#if updates.status === "uptodate"}
-
+              <p class="hint">{nom} est à jour.</p>
             {:else if updates.status === "error"}
               <p class="hint">Impossible de joindre GitHub ({updates.error}). Vérifiez la connexion à Internet.</p>
             {/if}

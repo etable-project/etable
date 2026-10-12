@@ -194,11 +194,11 @@
           <Tile color={current.plugin.color} icon={current.page.icon} variant="soft" size={32} />
           <h1>{current.page.title}</h1>
           <span class="pill">{current.plugin.name}</span>
-
+          <button class="btn primary open" onclick={openInEtabli}>Ouvrir {nom}</button>
         {:else}
           <span class="logo"><Icon name="zap" size={16} /></span>
           <h1>Aperçu rapide</h1>
-
+          <button class="btn primary open" onclick={openInEtabli}>Ouvrir {nom}</button>
         {/if}
       </header>
 
