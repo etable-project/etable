@@ -3,11 +3,11 @@ import { erreurHttp, lireConfigTrajets, lirePosition, lireTrajet, urlTrajet, url
 
 describe("trajets", () => {
   it("lit une configuration en refusant une clé douteuse", () => {
-    expect(lireConfigTrajets({ cle: " AbCdEf1234567 ", depart: "12 rue de la Paix, Paris" })).toEqual({ cle: "AbCdEf1234567", depart: "12 rue de la Paix, Paris" });
+    expect(lireConfigTrajets({ cle: " AbCdEf1234567 ", depart: "12 rue de la Paix, Paris", sansPeage: true })).toEqual({ cle: "AbCdEf1234567", depart: "12 rue de la Paix, Paris", sansPeage: true });
     expect(lireConfigTrajets({ cle: "trop" }).cle).toBe("");
     // Copié depuis une page web : espace insécable, caractère invisible, retour à la ligne, guillemets.
     expect(lireConfigTrajets({ cle: "\u00a0\"AbCd\u200bEf12 34567\"\n" }).cle).toBe("AbCdEf1234567");
-    expect(lireConfigTrajets(null)).toEqual({ cle: "", depart: "" });
+    expect(lireConfigTrajets(null)).toEqual({ cle: "", depart: "", sansPeage: false });
   });
   it("lit la position et le trajet rendus par TomTom", () => {
     expect(lirePosition({ results: [{ position: { lat: 48.8, lon: 2.3 } }] })).toEqual({ lat: 48.8, lon: 2.3 });
@@ -19,6 +19,8 @@ describe("trajets", () => {
     expect(urlTrajet("k", a, a, 1_000_000, 500)).toContain("departAt=now");
     expect(urlTrajet("k", a, a, 0, Date.UTC(2030, 0, 1, 8))).toContain("arriveAt=2030-01-01T08%3A00%3A00.000Z");
     expect(urlTrajet("k", a, a, 0)).toContain("traffic=true");
+    expect(urlTrajet("k", a, a, 0, undefined, true)).toContain("avoid=tollRoads");
+    expect(urlTrajet("k", a, a, 0)).not.toContain("avoid=");
   });
   it("traduit les erreurs et construit le lien Waze", () => {
     expect(erreurHttp(403)).toMatchObject({ ok: false, code: "refuse" });
