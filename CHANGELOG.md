@@ -23,6 +23,7 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Fixed
 
+- **Android: the app can reach the network again.** A camera fix in 0.1.22 removed the Internet permission from the manifest, so every request (server, GitHub, AI) failed. The patch script now keeps it and refuses to build without it.
 - **Android update check: simple request to GitHub** (no cache option, no custom header), which avoids a refused CORS pre-check; a rate limit is now reported as such.
 - **Android: the camera button really opens the camera.** Android 11 and later hide the camera app from an app that does not declare it; the manifest now does (it used to fall back to the gallery).
 - **Phone: full-screen dialogs scroll** (the long ticket check could not be scrolled to its buttons) and no longer add a second top margin.
