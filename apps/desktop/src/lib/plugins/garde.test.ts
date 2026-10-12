@@ -153,7 +153,7 @@ describe("autres messages", () => {
     const v = controler({ type: "widgetSummary", widget: "paiements", resume: { titre: "t".repeat(70), valeur: "v".repeat(50), lignes: Array.from({ length: 7 }, () => "l".repeat(90)) } }, strict());
     expect(v.ok).toBe(true);
     const r = (v as { message: { resume: { titre: string; valeur: string; lignes: string[] } } }).message.resume;
-    expect([r.titre.length, r.valeur.length, r.lignes.length, r.lignes[0].length]).toEqual([60, 40, 5, 80]);
+    expect([r.titre.length, r.valeur.length, r.lignes.length, r.lignes[0]?.length]).toEqual([60, 40, 5, 80]);
     expect(controler({ type: "widgetSummary", widget: "x", resume: { titre: 3 } }, strict()).ok).toBe(false);
   });
 });
