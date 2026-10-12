@@ -16,12 +16,15 @@ export type ResultatTrajet =
 
 const objet = (v: unknown): Record<string, unknown> | null => (typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 
-/** Lecture défensive : une clé imprimable sans espace (10 à 200 caractères), une adresse de 200 caractères au plus. */
+/**
+ * Lecture défensive. La clé : on retire tout ce qu'un copier-coller ajoute (espaces, retours à la ligne, caractères invisibles,
+ * guillemets) puis on garde une suite de lettres, chiffres, tirets, points ou soulignés (10 à 200). L'adresse : 200 caractères au plus.
+ */
 export function lireConfigTrajets(brut: unknown): ConfigTrajets {
   const o = objet(brut);
-  const cle = typeof o?.cle === "string" ? o.cle.trim().replace(/^["']|["']$/g, "") : "";
+  const cle = typeof o?.cle === "string" ? o.cle.replace(/[\s\u200b-\u200d\u2060\ufeff"'`«»]/g, "") : "";
   const depart = typeof o?.depart === "string" ? o.depart.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 200) : "";
-  return { cle: /^[\x21-\x7e]{10,200}$/.test(cle) ? cle : "", depart };
+  return { cle: /^[A-Za-z0-9._-]{10,200}$/.test(cle) ? cle : "", depart };
 }
 
 export const urlGeocodage = (cle: string, adresse: string): string =>
