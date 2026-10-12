@@ -41,8 +41,7 @@
 
 <div class="accueil">
   <header>
-    <Logo size={40} />
-    <h1>{distribution.name}</h1>
+    <div class="marque"><Logo size={34} /><h1>{distribution.name}</h1></div>
     <p>{dateDuJour}</p>
   </header>
 
@@ -85,32 +84,42 @@
     height: 100%;
     background: var(--surface);
   }
+  /* Le logo et le nom forment un bloc centré ; la date est centrée dessous. */
   header {
     flex: none;
-    display: grid;
-    grid-template-columns: auto auto;
-    justify-content: center;
+    display: flex;
+    flex-direction: column;
     align-items: center;
-    column-gap: 10px;
-    padding: calc(2px + env(safe-area-inset-top, 0px)) 16px 6px;
+    gap: 2px;
+    padding: calc(4px + env(safe-area-inset-top, 0px)) 16px 8px;
   }
-  header :global(svg),
-  header :global(img) {
-    grid-row: 1 / 3;
+  /* Le nom est exactement au centre ; le logo se place à sa gauche sans le décaler. */
+  .marque {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 8px;
+  }
+  .marque > :global(:first-child) {
+    justify-self: end;
+  }
+  .marque :global(svg) {
     display: block;
   }
   h1 {
     margin: 0;
     font-size: 21px;
     line-height: 1.1;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.02em;
   }
   header p {
     margin: 0;
     font-size: 12.5px;
     color: var(--muted);
     text-transform: capitalize;
-  }  nav {
+  }
+  nav {
     flex: 1;
     min-height: 0;
     overflow-y: auto;

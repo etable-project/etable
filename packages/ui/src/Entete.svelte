@@ -25,7 +25,14 @@
     justify-content: center;
     gap: 10px 16px;
   }
+  /* Le titre est déjà affiché par la barre de l'application : gardé pour les lecteurs d'écran, sans place à l'écran. */
   h1 {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
     margin: 0;
     font-size: 22px;
     font-weight: 800;

@@ -38,6 +38,10 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Changed
 
+- **Softer shapes everywhere**: pill buttons, rounder fields, cards and blocks.
+- **One title per page**: the page header of the UI kit no longer repeats the title the app bar already shows (it stays for screen readers), so content starts higher.
+- **Phone home**: the app name is exactly centred, the logo sits to its left.
+- **A distribution can show its icons without a coloured tile** (`tuilesNues` in `distribution.json`), for full-colour icons.
 - **Phone: settings are a list, then a full-screen section**; the home is a list of cards; every button is at least 44 px tall; dialogs close with a round cross; icons fill their tile better.
 - **The page title is centred** (page header of the UI kit, and the title bar on PC); the title-bar search button is gone (the shortcut still works).
 - **Plugin packages now always end in `.etapl`** (was `.etabli-plugin`): file dialogs, the administration page, the packaging script, the signed fixtures and the docs. Packages built with the old extension must be rebuilt.
