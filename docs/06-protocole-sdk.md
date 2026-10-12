@@ -203,3 +203,7 @@ connu, les champs bien formés, les tailles bornées (4 Mo de données par messa
 ignoré (une ligne dans la console) ; seul un `serviceCall` refusé reçoit une réponse d'erreur, pour que l'appelant n'attende pas en vain.
 `saveFile` n'accepte que des formats de données (`csv tsv dxf json txt svg md xml ics pdf`) et un nom sans chemin. Détail, menaces et
 limites : [19](19-modele-de-menace-plugins.md).
+
+## Trajets (permission `trajets`)
+
+`etabli.trajets.calculer({ vers, depuis?, arriveeAvant? })` returns `{ ok, minutes, distanceKm }` or `{ ok: false, code, message }`. The host geocodes both addresses and asks TomTom for a car route with live traffic, using the user's key and home address from *Settings → Trajets*; the plugin never sees the key. `arriveeAvant` (ms) targets an arrival time when it is in the future. `etabli.trajets.ouvrirWaze(destination)` opens Waze with the destination (no permission). The distribution enables it with `trajets: true` and must allow `https://api.tomtom.com` in `connect-src`.

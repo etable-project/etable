@@ -19,6 +19,7 @@ import {
   type PluginToHost,
   type AiImage,
   type AiResult,
+  type RouteResult,
   type Reminder,
   type RemindersResult,
   type SavedFile,
@@ -56,6 +57,7 @@ export type {
   AiErrorCode,
   AiImage,
   AiResult,
+  RouteResult,
   RemindersResult,
   RemindersState,
   SavedFile,
@@ -161,6 +163,11 @@ export interface Etabli<T> {
    * avec `recherche: true`, l'IA peut chercher sur internet (recettes, prix) avant de répondre.
    * Ne jette jamais : `{ ok: true, texte }` ou `{ ok: false, code, message }` (service non configuré, clé refusée, limite atteinte…).
    */
+  /** Trajets en voiture (permission `trajets`) : le moteur calcule avec la clé TomTom de l'utilisateur ; Waze s'ouvre sans permission. */
+  readonly trajets: {
+    calculer(options: { vers: string; depuis?: string; arriveeAvant?: number }): Promise<RouteResult>;
+    ouvrirWaze(destination: string): void;
+  };
   readonly ai: {
     extraire(options: { instruction: string; images?: AiImage[]; schema?: unknown; recherche?: boolean }): Promise<AiResult>;
   };
@@ -220,6 +227,23 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
         resolve(result);
       });
       send({ type: "reminders", id, ...request } as PluginToHost);
+    });
+
+  const pendingRoutes = new Map<string, (result: RouteResult) => void>();
+  let routeCounter = 0;
+  /** Demande un temps de trajet au moteur (jamais d'exception ; au plus 40 s). */
+  const askRoute = (options: { vers: string; depuis?: string; arriveeAvant?: number }): Promise<RouteResult> =>
+    new Promise((resolve) => {
+      const id = `t${++routeCounter}`;
+      const timer = setTimeout(() => {
+        pendingRoutes.delete(id);
+        resolve({ ok: false, code: "reseau", message: "Le calcul du trajet n'a pas répondu à temps." });
+      }, 40_000);
+      pendingRoutes.set(id, (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      });
+      send({ type: "route", id, vers: options.vers, ...(options.depuis !== undefined ? { depuis: options.depuis } : {}), ...(options.arriveeAvant !== undefined ? { arriveeAvant: options.arriveeAvant } : {}) } as PluginToHost);
     });
 
   const pendingAi = new Map<string, (result: AiResult) => void>();
@@ -376,6 +400,10 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
       clear: () => askReminders({ op: "set", items: [] }),
       state: () => askReminders({ op: "state" }),
     },
+    trajets: {
+      calculer: (options) => askRoute(options),
+      ouvrirWaze: (destination) => send({ type: "openMap", destination: String(destination) }),
+    },
     ai: {
       extraire: (options) => askAi({ ...options, schema: options.schema === undefined ? undefined : JSON.parse(JSON.stringify(options.schema)) }),
     },
@@ -431,6 +459,12 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
       case "serviceInvoke":
         void answerInvoke(message);
         break;
+      case "routeResult": {
+        const fini = pendingRoutes.get(message.id);
+        pendingRoutes.delete(message.id);
+        fini?.(message.result);
+        break;
+      }
       case "aiResult": {
         const done = pendingAi.get(message.id);
         pendingAi.delete(message.id);

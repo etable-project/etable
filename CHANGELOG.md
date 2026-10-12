@@ -13,6 +13,7 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Added
 
+- **Travel times with live traffic**: plugins with the new `trajets` permission ask the host for a car route (TomTom, the user's own key and home address in *Settings → Trajets*, never seen by the plugin), and can open Waze with a destination. Enabled per distribution (`trajets: true`).
 - **Mini-apps can save PDF files** (`saveFile` with the `pdf` extension), for printable sheets such as an estimated payslip.
 - **The installed version is shown at the bottom of the phone home.**
 - **Android updates download and install from the app.** *Download* now asks Android to download the APK (progress in the notification) and opens the installer when it is done; the first time, Android asks to allow the app to install updates. Android always asks you to confirm the installation.
