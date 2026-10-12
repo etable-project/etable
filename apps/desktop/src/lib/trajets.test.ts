@@ -4,7 +4,9 @@ import { erreurHttp, lireConfigTrajets, lirePosition, lireTrajet, urlTrajet, url
 describe("trajets", () => {
   it("lit une configuration en refusant une clé douteuse", () => {
     expect(lireConfigTrajets({ cle: " AbCdEf1234567 ", depart: "12 rue de la Paix, Paris" })).toEqual({ cle: "AbCdEf1234567", depart: "12 rue de la Paix, Paris" });
-    expect(lireConfigTrajets({ cle: "trop court" }).cle).toBe("");
+    expect(lireConfigTrajets({ cle: "trop" }).cle).toBe("");
+    // Copié depuis une page web : espace insécable, caractère invisible, retour à la ligne, guillemets.
+    expect(lireConfigTrajets({ cle: "\u00a0\"AbCd\u200bEf12 34567\"\n" }).cle).toBe("AbCdEf1234567");
     expect(lireConfigTrajets(null)).toEqual({ cle: "", depart: "" });
   });
   it("lit la position et le trajet rendus par TomTom", () => {
