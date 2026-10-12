@@ -189,7 +189,7 @@ button {
     padding: 0 16px;
   }
   .page {
-    padding: 16px 16px calc(28px + env(safe-area-inset-bottom, 0px));
+    padding: 12px 16px 28px;
     gap: 18px;
   }
 }

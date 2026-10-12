@@ -23,6 +23,8 @@ export interface Rapport {
   /** Phrase à montrer à l'utilisateur (conflit résolu, écriture refusée…). */
   message(texte: string): void;
   sessionExpiree(): void;
+  /** Une donnée montrée depuis la copie locale a changé sur le serveur : à relire. */
+  donneesChangees?(nom: string): void;
 }
 
 /** `ordre` : place dans la file (gardée quand une écriture en remplace une autre) ; `rev` : change à chaque remplacement. */
@@ -475,6 +477,19 @@ export function avecCache(brut: Fond, options: OptionsCache): FondAvecCache {
     async dataRead(nom) {
       const enFile = (await file()).find((o) => o.type === "donnees" && o.nom === nom);
       if (enFile && enFile.type === "donnees") return enFile.valeur;
+      // Copie locale d'abord : la page s'affiche tout de suite, même si le serveur est lent ou injoignable. Le serveur est
+      // consulté en arrière-plan ; si sa version diffère, la copie est mise à jour et l'interface prévenue.
+      const locale = await lire<unknown>(KV, `donnees:${nom}`);
+      if (locale !== undefined && locale !== null) {
+        void essai(() => brut.dataRead(nom))
+          .then(async (r) => {
+            if (!r || JSON.stringify(r.valeur) === JSON.stringify(locale)) return;
+            await ecrire(KV, r.valeur, `donnees:${nom}`);
+            rapport.donneesChangees?.(nom);
+          })
+          .catch(() => {});
+        return locale;
+      }
       const r = await essai(() => brut.dataRead(nom));
       if (r) {
         await ecrire(KV, r.valeur, `donnees:${nom}`);

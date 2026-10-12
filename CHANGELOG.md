@@ -23,6 +23,10 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Fixed
 
+- **Texts that were blank since 0.6** (settings choices, autostart switch, sign-in, home, quick preview, update banner) are back: a renaming script had emptied them.
+- **Phone: no more double top margin** under the status bar (the Android app already reserves it).
+- **No more white page with blue buttons while a page loads**: a page stays hidden until it is ready, with a loading wheel in its place.
+- **Pages open faster when the server is slow or out of reach**: plugin data is shown from the device copy first and refreshed from the server in the background.
 - **Android: the app can reach the network again.** A camera fix in 0.1.22 removed the Internet permission from the manifest, so every request (server, GitHub, AI) failed. The patch script now keeps it and refuses to build without it.
 - **Android update check: simple request to GitHub** (no cache option, no custom header), which avoids a refused CORS pre-check; a rate limit is now reported as such.
 - **Android: the camera button really opens the camera.** Android 11 and later hide the camera app from an app that does not declare it; the manifest now does (it used to fall back to the gallery).
@@ -38,6 +42,8 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Changed
 
+- **Simpler settings**: *Application* (General, Appearance, AI, Shortcuts, Server, Administration, Alarms, About last), then *Plugins* (each plugin's settings, then Manage plugins); shorter names and descriptions.
+- **Phone home**: the logo lines up with the page icons and the date with their names; *Change order* lets you reorder the pages.
 - **Phone: a lone button inside a block is centred.**
 - **Softer shapes everywhere**: pill buttons, rounder fields, cards and blocks.
 - **One title per page**: the page header of the UI kit no longer repeats the title the app bar already shows (it stays for screen readers), so content starts higher.

@@ -20,8 +20,9 @@
     flex: none;
     display: flex;
     align-items: center;
-    min-height: calc(var(--titlebar) + env(safe-area-inset-top, 0px));
-    padding: env(safe-area-inset-top, 0px) 6px 0;
+    /* Pas de marge pour la barre d'état : l'application Android la réserve déjà (MainActivity). */
+    min-height: var(--titlebar);
+    padding: 0 6px;
     background: var(--surface-2);
     border-bottom: 1px solid var(--border);
   }

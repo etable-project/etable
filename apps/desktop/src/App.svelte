@@ -18,6 +18,7 @@
   import { api, clientServeur, system } from "$lib/api";
   import { ecouter } from "$lib/serveur/evenements";
   import { pluginData } from "$lib/state/pluginData.svelte";
+  import { synchro } from "$lib/state/synchro.svelte";
   import { preparerPluginsHorsLigne } from "$lib/serveur/horsLigne";
   import { applyAppearance } from "$lib/appearance";
   import { openPluginSettings } from "$lib/pluginSettings";
@@ -35,12 +36,18 @@
   $effect(() => {
     if (!clientServeur) return;
     const relireTout = () => Object.keys(pluginData.data).forEach((id) => void pluginData.load(id));
-    return ecouter(clientServeur, {
+    const relire = (nom: string) => nom.startsWith("plugin.") && void pluginData.load(nom.slice("plugin.".length));
+    const arreterCopie = synchro.surDonneesChangees(relire);
+    const arreterEcoute = ecouter(clientServeur, {
       surOuverture: relireTout,
       surChangement: (c) => {
         if (c.type === "donnees" && c.nom.startsWith("plugin.")) void pluginData.load(c.nom.slice("plugin.".length));
       },
     });
+    return () => {
+      arreterEcoute();
+      arreterCopie();
+    };
   });
 
   $effect(() => applyAppearance());
