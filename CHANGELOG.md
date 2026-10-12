@@ -11,6 +11,10 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ## [Non publié]
 
+### Fixed
+
+- **Android widgets stuck on "open the app"**: a widget summary with a too-long title, value or line is now shortened instead of dropped.
+
 ### Added
 
 - **Travel times without tolls**: an *Avoid tolls* option in *Settings → Trajets*.
