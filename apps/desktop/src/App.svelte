@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import CommandPalette from "$lib/components/CommandPalette.svelte";
   import MobileAccueil from "$lib/components/MobileAccueil.svelte";
   import MobileBar from "$lib/components/MobileBar.svelte";
@@ -19,6 +20,7 @@
   import { ecouter } from "$lib/serveur/evenements";
   import { pluginData } from "$lib/state/pluginData.svelte";
   import { synchro } from "$lib/state/synchro.svelte";
+  import { estBureau } from "$lib/plateforme";
   import { preparerPluginsHorsLigne } from "$lib/serveur/horsLigne";
   import { applyAppearance } from "$lib/appearance";
   import { openPluginSettings } from "$lib/pluginSettings";
@@ -48,6 +50,13 @@
       arreterEcoute();
       arreterCopie();
     };
+  });
+
+  // Raccourci de l'aperçu rapide : un ancien réglage AZERTY réparé au chargement est enregistré et appliqué tout de suite.
+  $effect(() => {
+    if (!estBureau) return;
+    const s = untrack(() => $state.snapshot(settings.quickShortcut));
+    void system.setShortcut(s.accelerator).then(() => settings.set("quickShortcut", s)).catch(() => {});
   });
 
   $effect(() => applyAppearance());

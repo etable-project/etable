@@ -20,7 +20,9 @@
   let adresse = $state(precedente?.url ?? "");
   // Valeurs saisies ou trouvées par « Continuer » ; à défaut, celles données par la page qui nous affiche.
   let installeTrouve = $state<boolean | null>(null);
-  let adresseVerifiee = $state(false);
+  // Session expirée : l'adresse du serveur est déjà connue, seuls l'identifiant et le mot de passe sont demandés.
+  // svelte-ignore state_referenced_locally
+  let adresseVerifiee = $state(expiree && !!precedente?.url);
   const installe = $derived(installeTrouve ?? installeInitial);
   const verifie = $derived(memeOrigine || adresseVerifiee);
   let nom = $state(precedente?.nom ?? "");

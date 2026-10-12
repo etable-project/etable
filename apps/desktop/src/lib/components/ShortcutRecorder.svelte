@@ -1,6 +1,7 @@
 <script lang="ts">
   // Enregistreur de raccourci : on clique, on appuie sur la combinaison voulue, c'est tout.
-  // La touche est prise par son emplacement physique (event.code) : le raccourci marche en AZERTY.
+  // Raccourci de l'application : la touche est prise par son emplacement physique (event.code). Raccourci Windows (aperçu
+  // rapide) : Windows reconnaît une lettre par ce qu'elle affiche, pas par sa place ; on prend donc la lettre tapée (AZERTY).
   import type { Shortcut } from "$lib/state/settings.svelte";
 
   interface Props {
@@ -47,7 +48,10 @@
   /** Nom de la touche pour le raccourci et pour l'affichage ; null si la touche n'est pas prise en charge. */
   function keyOf(event: KeyboardEvent): { code: string; label: string } | null {
     const { code, key } = event;
-    if (/^Key[A-Z]$/.test(code)) return { code, label: key.length === 1 ? key.toUpperCase() : code.slice(3) };
+    if (/^Key[A-Z]$/.test(code)) {
+      const lettre = key.length === 1 && /^[a-z]$/i.test(key) ? key.toUpperCase() : null;
+      return { code: scope === "global" && lettre ? `Key${lettre}` : code, label: lettre ?? code.slice(3) };
+    }
     if (/^Digit\d$/.test(code)) return { code, label: code.slice(5) };
     if (/^Numpad\d$/.test(code)) return { code, label: `Pavé ${code.slice(6)}` };
     if (/^F([1-9]|1\d|2[0-4])$/.test(code)) return { code, label: code };

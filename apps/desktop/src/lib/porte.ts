@@ -14,8 +14,9 @@ export interface Porte {
 
 /** `null` : l'application peut démarrer. Sinon, l'écran de connexion décrit par la porte. */
 export async function decider(): Promise<Porte | null> {
-  if (api.id === "tauri") return null;
-  if (api.id === "serveur" && clientServeur) {
+  // Application native sans serveur : rien à demander. Reliée à un serveur, elle vérifie la session comme la version web.
+  if (api.id === "tauri" && !clientServeur) return null;
+  if (clientServeur) {
     try {
       await clientServeur.requete("GET", "/api/moi");
       return null;

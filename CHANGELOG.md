@@ -23,6 +23,8 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Fixed
 
+- **Quick preview shortcut on AZERTY keyboards**: a Windows shortcut is now recorded by the letter shown on the key (Windows matches letters, not positions); an old setting such as *Ctrl + Maj + Q* saved as the A position is repaired at start.
+- **Native apps: expired server session shows the sign-in screen** (with the server address already filled) instead of signing out silently.
 - **Texts that were blank since 0.6** (settings choices, autostart switch, sign-in, home, quick preview, update banner) are back: a renaming script had emptied them.
 - **Phone: no more double top margin** under the status bar (the Android app already reserves it).
 - **No more white page with blue buttons while a page loads**: a page stays hidden until it is ready, with a loading wheel in its place.
