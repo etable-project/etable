@@ -2,8 +2,8 @@ use std::{fs, io, path::Path};
 use tauri_plugin_dialog::DialogExt;
 
 /// Formats qu'une mini-app peut proposer à « Enregistrer sous » : jamais un programme ni un script (docs/19).
-const EXTENSIONS_PERMISES: [&str; 9] = [
-    "csv", "tsv", "dxf", "json", "txt", "svg", "md", "xml", "ics",
+const EXTENSIONS_PERMISES: [&str; 10] = [
+    "csv", "tsv", "dxf", "json", "txt", "svg", "md", "xml", "ics", "pdf",
 ];
 /// Taille maximale du contenu d'un fichier exporté par une mini-app.
 const EXPORT_MAX: usize = 20 * 1024 * 1024;
