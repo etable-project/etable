@@ -38,6 +38,7 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Changed
 
+- **Phone: a lone button inside a block is centred.**
 - **Softer shapes everywhere**: pill buttons, rounder fields, cards and blocks.
 - **One title per page**: the page header of the UI kit no longer repeats the title the app bar already shows (it stays for screen readers), so content starts higher.
 - **Phone home**: the app name is exactly centred, the logo sits to its left.

@@ -43,6 +43,12 @@
   .btn.sm {
     min-height: 40px;
   }
+  /* Téléphone : un bouton seul dans un bloc est centré, comme les boutons d'en-tête. */
+  .bloc > .btn {
+    display: flex;
+    width: fit-content;
+    margin-inline: auto;
+  }
   .page-plugin {
     box-sizing: border-box;
     width: 100%;
