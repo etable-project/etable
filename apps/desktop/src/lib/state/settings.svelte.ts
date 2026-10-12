@@ -1,3 +1,4 @@
+import { corrigerLettreGlobale } from "$lib/raccourciLettre";
 import { BOARD_DEFAUT, lireBoard } from "$lib/board";
 import { lireChoix, lireNoms } from "$lib/categories";
 import { load, save } from "$lib/storage";
@@ -72,7 +73,6 @@ const DEFAULTS: Persisted = {
   closeToTray: true,
   checkUpdates: true,
 };
-
 class Settings {
   theme = $state(DEFAULTS.theme);
   customThemes = $state<Theme[]>([]);
@@ -114,7 +114,7 @@ class Settings {
     this.categoryOf = lireChoix(saved.categoryOf);
     this.categoryOrder = lireNoms(saved.categoryOrder);
     this.foldedCategories = lireNoms(saved.foldedCategories);
-    this.quickShortcut = saved.quickShortcut;
+    this.quickShortcut = corrigerLettreGlobale(saved.quickShortcut);
     this.shortcuts = saved.shortcuts;
     this.closeToTray = saved.closeToTray;
     this.checkUpdates = saved.checkUpdates;
