@@ -11,6 +11,10 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ## [Non publié]
 
+### Fixed
+
+- **No more lost changes between devices**: before saving a plugin's data, the app checks whether the server copy changed elsewhere (another device, a home-screen widget) and merges both field by field and item by item (lists of items with an `id`). Only a change of the same value on both sides is a conflict, and this device wins it.
+
 ### Added
 
 - **Tick-off lists on Android home-screen widgets**: a widget summary can carry `cases` (path to the items in the plugin's own data, plus id, text and check fields). The phone shows the items with checkboxes; a tap saves the change straight to the server, even with the app closed, and the list refreshes from the server every 30 minutes.
