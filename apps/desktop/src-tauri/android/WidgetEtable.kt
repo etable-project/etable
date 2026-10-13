@@ -116,7 +116,8 @@ class WidgetEtable : AppWidgetProvider() {
     /** Relit sur le serveur toutes les listes à cocher posées sur l'écran d'accueil. */
     fun actualiserCases(c: Context) {
       val m = AppWidgetManager.getInstance(c)
-      val cles = m.getAppWidgetIds(ComponentName(c, WidgetEtable::class.java)).mapNotNull { prefs(c).getString("choix_$it", null) }.toSet()
+      val cles = HashSet<String>()
+      for (id in m.getAppWidgetIds(ComponentName(c, WidgetEtable::class.java))) prefs(c).getString("choix_" + id, null)?.let { cle -> cles.add(cle) }
       for (cle in cles) {
         val r = lireResume(c, cle) ?: continue
         val cases = r.optJSONObject("cases") ?: continue
