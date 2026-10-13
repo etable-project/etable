@@ -8,6 +8,7 @@
 //   NOUVEAU calcul « (copie hors ligne) ». Rien n'est jamais écrasé ni perdu en silence.
 // * Le serveur est la source de vérité ; ce cache n'est qu'une copie de secours.
 import type { DocumentFile, DocumentFilter, DocumentInput, DocumentMeta, Fond } from "../fond/types";
+import { egal, fusionner } from "./fusion";
 import { ErreurApi, estHorsLigne } from "./http";
 
 const VERSION_BASE = 1;
@@ -226,6 +227,24 @@ export function avecCache(brut: Fond, options: OptionsCache): FondAvecCache {
     return copie;
   }
 
+  /**
+   * Écrit les données d'un plugin sans écraser ce qu'un autre appareil (ou un widget) a changé depuis notre dernière
+   * lecture : si le serveur a bougé, les deux versions sont fusionnées (fusion.ts) et l'interface relit le résultat.
+   */
+  async function envoyerDonnees(nom: string, valeur: unknown): Promise<void> {
+    const base = await lire<unknown>(KV, `base:${nom}`);
+    let aEcrire = valeur;
+    if (base !== undefined) {
+      // shortcut: lecture puis écriture sans verrou ; une écriture d'ailleurs dans ce court intervalle serait écrasée.
+      const distant = await brut.dataRead(nom);
+      if (!egal(distant, base)) aEcrire = fusionner(base, valeur, distant);
+    }
+    await brut.dataWrite(nom, aEcrire);
+    await ecrire(KV, aEcrire, `base:${nom}`);
+    await ecrire(KV, aEcrire, `donnees:${nom}`);
+    if (!egal(aEcrire, valeur)) rapport.donneesChangees?.(nom);
+  }
+
   async function rejouer(op: Operation): Promise<{ versionDoc?: number }> {
     switch (op.type) {
       case "doc": {
@@ -253,7 +272,7 @@ export function avecCache(brut: Fond, options: OptionsCache): FondAvecCache {
         }
         break;
       case "donnees":
-        await brut.dataWrite(op.nom, op.valeur);
+        await envoyerDonnees(op.nom, op.valeur);
         break;
       case "reglages":
         await brut.storeSave(op.valeur);
@@ -483,7 +502,9 @@ export function avecCache(brut: Fond, options: OptionsCache): FondAvecCache {
       if (locale !== undefined && locale !== null) {
         void essai(() => brut.dataRead(nom))
           .then(async (r) => {
-            if (!r || JSON.stringify(r.valeur) === JSON.stringify(locale)) return;
+            if (!r) return;
+            await ecrire(KV, r.valeur, `base:${nom}`);
+            if (JSON.stringify(r.valeur) === JSON.stringify(locale)) return;
             await ecrire(KV, r.valeur, `donnees:${nom}`);
             rapport.donneesChangees?.(nom);
           })
@@ -493,6 +514,7 @@ export function avecCache(brut: Fond, options: OptionsCache): FondAvecCache {
       const r = await essai(() => brut.dataRead(nom));
       if (r) {
         await ecrire(KV, r.valeur, `donnees:${nom}`);
+        await ecrire(KV, r.valeur, `base:${nom}`);
         return r.valeur;
       }
       return (await lire<unknown>(KV, `donnees:${nom}`)) ?? null;
@@ -501,8 +523,7 @@ export function avecCache(brut: Fond, options: OptionsCache): FondAvecCache {
     async dataWrite(nom, valeur) {
       await ecrireOuMettreEnFile<void>(
         async () => {
-          await brut.dataWrite(nom, valeur);
-          await ecrire(KV, valeur, `donnees:${nom}`);
+          await envoyerDonnees(nom, valeur);
         },
         { cle: `donnees:${nom}`, type: "donnees", nom, valeur },
         async () => ecrire(KV, valeur, `donnees:${nom}`),
