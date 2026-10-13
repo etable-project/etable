@@ -3,6 +3,7 @@
   // (message `widgetSummary`) ; on le passe à la partie native (MainActivity.kt, WidgetEtable.kt), qui dessine le widget Android.
   // Le catalogue (la liste des widgets disponibles) sert à l'écran « Choisir le widget » d'Android.
   import type { PluginToHost } from "@etabli/sdk/protocol";
+  import { clientServeur } from "$lib/fond";
   import { allWidgets, pluginUrl } from "$lib/plugins/registry.svelte";
   import { settings } from "$lib/state/settings.svelte";
   import MiniAppFrame from "./MiniAppFrame.svelte";
@@ -23,6 +24,12 @@
     return () => (clearTimeout(t), clearInterval(pas));
   });
 
+  // Les listes à cocher se relisent et s'enregistrent sur le serveur, même application fermée : le téléphone garde
+  // l'adresse et le jeton de session (dans le stockage privé de l'application, comme la vue web).
+  $effect(() => {
+    pont()?.postMessage(JSON.stringify({ serveur: clientServeur?.jeton ? { url: clientServeur.base, jeton: clientServeur.jeton } : null }));
+  });
+
   $effect(() => {
     const catalogue = widgets.map((w) => ({ cle: cle(w.plugin.id, w.widget.id), titre: `${w.widget.title} · ${w.plugin.name}` }));
     pont()?.postMessage(JSON.stringify({ catalogue }));
@@ -32,7 +39,9 @@
     return (message: PluginToHost): void => {
       if (message.type !== "widgetSummary") return;
       const r = message.resume;
-      pont()?.postMessage(JSON.stringify({ resume: { cle: cle(pluginId, message.widget), ...r, ...(r.page ? { page: `${pluginId}:${r.page}` } : {}) } }));
+      // Les cases ne touchent que les données de ce plugin : c'est l'hôte qui nomme la donnée, jamais le plugin.
+      const cases = r.cases ? { cases: { ...r.cases, donnee: `plugin.${pluginId}` } } : {};
+      pont()?.postMessage(JSON.stringify({ resume: { cle: cle(pluginId, message.widget), ...r, ...(r.page ? { page: `${pluginId}:${r.page}` } : {}), ...cases } }));
     };
   }
 </script>

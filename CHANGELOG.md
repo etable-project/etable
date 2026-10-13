@@ -11,6 +11,10 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ## [Non publié]
 
+### Added
+
+- **Tick-off lists on Android home-screen widgets**: a widget summary can carry `cases` (path to the items in the plugin's own data, plus id, text and check fields). The phone shows the items with checkboxes; a tap saves the change straight to the server, even with the app closed, and the list refreshes from the server every 30 minutes.
+
 ### Fixed
 
 - **Android widgets stuck on "open the app"**: a widget summary with a too-long title, value or line is now shortened instead of dropped.

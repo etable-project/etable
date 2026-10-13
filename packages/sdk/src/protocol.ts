@@ -201,6 +201,22 @@ export interface WidgetSummary {
   lignes?: string[];
   /** Page du plugin à ouvrir au toucher. */
   page?: string;
+  /** Liste à cocher depuis l'écran d'accueil, même application fermée (voir `WidgetCases`). Remplace les lignes. */
+  cases?: WidgetCases;
+}
+
+/**
+ * Liste à cocher d'un widget : le téléphone la relit et la modifie directement dans les données du plugin (`settings`) sur le
+ * serveur. `chemin` mène aux éléments depuis la racine des données : un texte prend le champ de ce nom, un objet garde les
+ * éléments d'un tableau dont les champs valent ces valeurs (`["listes", { reglement: null }, "articles"]`).
+ * `id`, `texte` et `coche` nomment les champs de chaque élément ; `elements` est l'état actuel, affiché tout de suite.
+ */
+export interface WidgetCases {
+  chemin: (string | Record<string, string | number | boolean | null>)[];
+  id: string;
+  texte: string;
+  coche: string;
+  elements: { id: string; texte: string; coche: boolean }[];
 }
 
 export type RouteErrorCode = "non_configure" | "introuvable" | "refuse" | "limite" | "reseau" | "erreur";

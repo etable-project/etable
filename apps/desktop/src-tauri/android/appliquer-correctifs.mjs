@@ -54,11 +54,15 @@ ressource(
     texte("etable_titre", "etable_widget_doux", 12, true, 1) +
     texte("etable_valeur", "etable_widget_texte", 26, true, 1) +
     texte("etable_lignes", "etable_widget_texte", 13, false, 5) +
+    // Lignes d'une liste à cocher (WidgetEtable.CASES_MAX), cachées pour les autres widgets.
+    Array.from({ length: 8 }, (_, i) =>
+      `  <TextView android:id="@+id/etable_case${i}" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingTop="7dp" android:paddingBottom="7dp" android:textColor="@color/etable_widget_texte" android:textSize="15sp" android:maxLines="1" android:ellipsize="end" android:visibility="gone" />\n`,
+    ).join("") +
     `</LinearLayout>\n`,
 );
 ressource(
   "xml/etable_widget_info.xml",
-  `<?xml version="1.0" encoding="utf-8"?>\n<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android" android:minWidth="110dp" android:minHeight="50dp" android:targetCellWidth="2" android:targetCellHeight="1" android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen" android:initialLayout="@layout/etable_widget" android:configure="${paquet}.WidgetChoix" android:widgetFeatures="reconfigurable" android:updatePeriodMillis="0" />\n`,
+  `<?xml version="1.0" encoding="utf-8"?>\n<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android" android:minWidth="110dp" android:minHeight="50dp" android:targetCellWidth="2" android:targetCellHeight="1" android:resizeMode="horizontal|vertical" android:widgetCategory="home_screen" android:initialLayout="@layout/etable_widget" android:configure="${paquet}.WidgetChoix" android:widgetFeatures="reconfigurable" android:updatePeriodMillis="1800000" />\n`,
 );
 
 // 2. Permissions d'alarme exacte et d'installation des mises à jour (REQUEST_INSTALL_PACKAGES) (USE_EXACT_ALARM est accordée d'office hors Play Store ; SCHEDULE_EXACT_ALARM couvre Android 12 et 13).

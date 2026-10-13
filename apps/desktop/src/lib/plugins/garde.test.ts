@@ -156,6 +156,19 @@ describe("autres messages", () => {
     expect([r.titre.length, r.valeur.length, r.lignes.length, r.lignes[0]?.length]).toEqual([60, 40, 5, 80]);
     expect(controler({ type: "widgetSummary", widget: "x", resume: { titre: 3 } }, strict()).ok).toBe(false);
   });
+
+  it("contrôle la liste à cocher d'un widget", () => {
+    const cases = { chemin: ["listes", { reglement: null }, "articles"], id: "id", texte: "nom", coche: "pris", elements: [{ id: "a1", texte: "Lait", coche: false }] };
+    const v = controler({ type: "widgetSummary", widget: "liste", resume: { titre: "Courses", cases } }, strict());
+    expect(v.ok && v.message.type === "widgetSummary" && v.message.resume.cases).toEqual(cases);
+    for (const mauvais of [
+      { ...cases, chemin: [] },
+      { ...cases, chemin: ["../x"] },
+      { ...cases, chemin: [{ a: { b: 1 } }] },
+      { ...cases, coche: "pris.x" },
+      { ...cases, elements: [{ id: "a1", texte: "Lait", coche: "oui" }] },
+    ]) expect(controler({ type: "widgetSummary", widget: "liste", resume: { titre: "C", cases: mauvais } }, strict()).ok, JSON.stringify(mauvais)).toBe(false);
+  });
 });
 
 describe("permissions du manifeste", () => {

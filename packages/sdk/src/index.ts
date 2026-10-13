@@ -60,6 +60,7 @@ export type {
   AiResult,
   RouteResult,
   WidgetSummary,
+  WidgetCases,
   RemindersResult,
   RemindersState,
   SavedFile,
