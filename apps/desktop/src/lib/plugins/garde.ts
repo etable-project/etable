@@ -15,6 +15,7 @@ import {
   type SavedFile,
   type ServiceErrorCode,
   type ServiceResult,
+  type WidgetCases,
 } from "@etabli/sdk/protocol";
 import { permissionAppel } from "./permissions";
 
@@ -72,6 +73,32 @@ const bon = (message: PluginToHost): Verdict => ({ ok: true, message });
 
 const estObjet = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const estTexte = (v: unknown, max: number): v is string => typeof v === "string" && v.length <= max;
+
+const CHAMP = /^[A-Za-z0-9_]{1,40}$/;
+
+/** Liste à cocher d'un résumé de widget, recopiée champ par champ ; `null` si elle est mal formée. */
+function casesWidget(v: unknown): WidgetCases | null {
+  if (!estObjet(v) || !Array.isArray(v.chemin) || v.chemin.length < 1 || v.chemin.length > 8 || !Array.isArray(v.elements)) return null;
+  const chemin: WidgetCases["chemin"] = [];
+  for (const s of v.chemin) {
+    if (typeof s === "string" && CHAMP.test(s)) chemin.push(s);
+    else if (estObjet(s) && Object.keys(s).length >= 1 && Object.keys(s).length <= 4) {
+      const filtre: Record<string, string | number | boolean | null> = {};
+      for (const [k, x] of Object.entries(s)) {
+        if (!CHAMP.test(k) || !(x === null || typeof x === "boolean" || (typeof x === "number" && Number.isFinite(x)) || estTexte(x, 40))) return null;
+        filtre[k] = x;
+      }
+      chemin.push(filtre);
+    } else return null;
+  }
+  if (![v.id, v.texte, v.coche].every((c) => typeof c === "string" && CHAMP.test(c))) return null;
+  const elements: WidgetCases["elements"] = [];
+  for (const e of v.elements.slice(0, 50)) {
+    if (!estObjet(e) || !estTexte(e.id, 64) || typeof e.texte !== "string" || typeof e.coche !== "boolean") return null;
+    elements.push({ id: e.id, texte: e.texte.slice(0, 80), coche: e.coche });
+  }
+  return { chemin, id: v.id as string, texte: v.texte as string, coche: v.coche as string, elements };
+}
 
 /** Taille JSON, ou `null` si la valeur n'est pas sérialisable (référence circulaire, BigInt…). */
 function tailleJson(valeur: unknown): number | null {
@@ -255,7 +282,9 @@ export function controler(brut: unknown, ctx: Contexte): Verdict {
         if (r.page !== undefined && (!estTexte(r.page, 64) || !/^[a-z0-9-]+$/.test(r.page))) return refus("page du résumé invalide");
         if (r.lignes !== undefined && (!Array.isArray(r.lignes) || r.lignes.length > 50 || !r.lignes.every((l) => typeof l === "string" && l.length <= 2000))) return refus("lignes du résumé illisibles");
         const lignes = r.lignes === undefined ? undefined : (r.lignes as string[]).slice(0, 5).map((l) => couper(l, 80));
-        return bon({ type, widget: brut.widget, resume: { titre: couper(r.titre, 60), ...(r.valeur !== undefined ? { valeur: couper(r.valeur as string, 40) } : {}), ...(lignes ? { lignes } : {}), ...(r.page !== undefined ? { page: r.page } : {}) } });
+        const cases = r.cases === undefined ? undefined : casesWidget(r.cases);
+        if (cases === null) return refus("liste à cocher du résumé invalide");
+        return bon({ type, widget: brut.widget, resume: { titre: couper(r.titre, 60), ...(r.valeur !== undefined ? { valeur: couper(r.valeur as string, 40) } : {}), ...(lignes ? { lignes } : {}), ...(r.page !== undefined ? { page: r.page } : {}), ...(cases ? { cases } : {}) } });
       }
       case "openMap": {
         if (!estTexte(brut.destination, 200) || brut.destination.trim() === "") return refus("destination vide ou trop longue");
