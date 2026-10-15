@@ -17,6 +17,7 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ### Added
 
+- **Server: refuse a data write that would overwrite a newer copy**: reading `/api/donnees/{nom}` now returns the data version in an `X-Version` header, and writing accepts `?versionAttendue=N` (0 = "nothing saved yet"); if the data changed since, the server answers 409 with `versionActuelle` instead of overwriting. Writes without it behave as before, so existing apps are unaffected. Lets an automated helper (the personal brain) edit data safely next to the apps.
 - **Tick-off lists on Android home-screen widgets**: a widget summary can carry `cases` (path to the items in the plugin's own data, plus id, text and check fields). The phone shows the items with checkboxes; a tap saves the change straight to the server, even with the app closed, and the list refreshes from the server every 30 minutes.
 
 ### Fixed
