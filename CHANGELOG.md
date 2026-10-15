@@ -11,6 +11,10 @@ Release GitHub et le message de mise à jour affiché dans l'application (voir
 
 ## [Non publié]
 
+### Added
+
+- **AI: your own "brain" (local model) as a second service**: Settings → Artificial intelligence lets you choose who answers plugins' AI requests: Gemini (personal key) or your brain, an OpenAI-compatible server on your private network (address + token). Text requests go to the chosen service; photos still go to Gemini when a key is saved (the local model reads no images). Plugins wait up to 5 minutes for an answer (a local model is slower).
+
 ### Fixed
 
 - **No more lost changes between devices**: before saving a plugin's data, the app checks whether the server copy changed elsewhere (another device, a home-screen widget) and merges both field by field and item by item (lists of items with an `id`). Only a change of the same value on both sides is a conflict, and this device wins it.

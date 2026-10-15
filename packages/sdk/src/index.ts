@@ -265,7 +265,7 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
       const timer = setTimeout(() => {
         pendingAi.delete(id);
         resolve({ ok: false, code: "erreur", message: "L'IA n'a pas répondu à temps." });
-      }, 90_000);
+      }, 300_000); // un modèle local (Qwen, par le cerveau) met jusqu'à quelques minutes pour un plan de repas
       pendingAi.set(id, (result) => {
         clearTimeout(timer);
         resolve(result);
