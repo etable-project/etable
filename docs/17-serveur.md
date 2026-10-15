@@ -72,7 +72,7 @@ Toutes les réponses d'erreur sont `{ "erreur": "phrase en français" }`. Authen
 | `POST /api/session` · `DELETE /api/session` | connexion → jeton · déconnexion |
 | `GET /api/moi` · `POST /api/moi/mot-de-passe` · `GET /api/moi/export` | compte, changement de mot de passe, export de ses données |
 | `GET /api/documents?plugin=&app=&limite=` · `GET/DELETE /api/documents/{id}` · `PUT /api/documents` | calculs ; `PUT` avec `versionAttendue` → 409 si le calcul a changé ailleurs |
-| `GET/PUT /api/donnees/{nom}` · `GET/PUT /api/reglages` | réglages de plugin et services publiés · réglages de l'application |
+| `GET/PUT /api/donnees/{nom}` · `GET/PUT /api/reglages` | réglages de plugin et services publiés · réglages de l'application ; `GET` renvoie la version dans `X-Version` (0 = rien), `PUT ?versionAttendue=N` → 409 si la donnée a changé ailleurs (sans le paramètre, l'écriture écrase) |
 | `GET /api/plugins` · `GET /plugins/{id}/{chemin}` | plugins accessibles à l'utilisateur · leurs fichiers (publics, politique sans réseau) |
 | `…/api/admin/utilisateurs` (GET, POST, PATCH, DELETE) | comptes (jamais de second administrateur ; suppression avec `?confirmer=`) |
 | `…/api/admin/plugins` (GET, POST, PATCH, DELETE) | `POST` = paquet `.etapl` tel quel ; `PATCH` = `actifGlobal`, `utilisateurs` |

@@ -7,12 +7,14 @@ use crate::{
     etat::Etat,
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
+    response::{IntoResponse, Response},
     Json,
 };
 use etabli_noyau::identifiants::donnees_valide;
 use rusqlite::OptionalExtension;
+use serde::Deserialize;
 use serde_json::{json, Value};
 
 /// Taille maximale d'une donnée ou des réglages, une fois en JSON.
@@ -29,36 +31,47 @@ fn controler_taille(valeur: &Value) -> Resultat<String> {
 }
 
 /// Contenu enregistré, ou `null` s'il n'y a encore rien (comme le fait l'application de bureau).
+/// L'en-tête `X-Version` donne la version lue (0 s'il n'y a rien) : un client qui veut éviter d'écraser un autre
+/// appareil la renvoie en `?versionAttendue=` à l'écriture.
 pub async fn lire(
     State(etat): State<Etat>,
     session: Session,
     Path(nom): Path<String>,
-) -> Resultat<Json<Value>> {
+) -> Resultat<Response> {
     if !donnees_valide(&nom) {
         return Err(Erreur::requete("Nom de données invalide."));
     }
-    let texte: Option<String> = etat
+    let lu: Option<(String, i64)> = etat
         .base
         .executer(move |c| {
             Ok(c.query_row(
-                "SELECT valeur FROM donnees WHERE utilisateur_id = ?1 AND nom = ?2",
+                "SELECT valeur, version FROM donnees WHERE utilisateur_id = ?1 AND nom = ?2",
                 rusqlite::params![session.utilisateur_id, nom],
-                |l| l.get(0),
+                |l| Ok((l.get(0)?, l.get(1)?)),
             )
             .optional()?)
         })
         .await?;
-    Ok(Json(
-        texte
-            .and_then(|t| serde_json::from_str(&t).ok())
-            .unwrap_or(Value::Null),
-    ))
+    let version = lu.as_ref().map_or(0, |(_, v)| *v);
+    let valeur = lu
+        .and_then(|(t, _)| serde_json::from_str(&t).ok())
+        .unwrap_or(Value::Null);
+    Ok(([("x-version", version.to_string())], Json(valeur)).into_response())
+}
+
+/// Condition facultative d'écriture : sans elle, l'écriture écrase (comportement historique).
+#[derive(Deserialize)]
+pub struct Condition {
+    /// Version lue par le client (0 = « rien d'enregistré ») : si la donnée a changé depuis, l'écriture est refusée (409).
+    #[serde(rename = "versionAttendue")]
+    version_attendue: Option<u64>,
 }
 
 pub async fn ecrire(
     State(etat): State<Etat>,
     session: Session,
     Path(nom): Path<String>,
+    Query(condition): Query<Condition>,
     Json(valeur): Json<Value>,
 ) -> Resultat<Json<Value>> {
     if !donnees_valide(&nom) {
@@ -70,15 +83,20 @@ pub async fn ecrire(
         .base
         .executer(move |c| {
             let tx = c.transaction()?;
-            let existe: bool = tx
+            let actuelle: Option<i64> = tx
                 .query_row(
-                    "SELECT 1 FROM donnees WHERE utilisateur_id = ?1 AND nom = ?2",
+                    "SELECT version FROM donnees WHERE utilisateur_id = ?1 AND nom = ?2",
                     rusqlite::params![session.utilisateur_id, nom],
-                    |_| Ok(true),
+                    |l| l.get(0),
                 )
-                .optional()?
-                .unwrap_or(false);
-            if !existe {
+                .optional()?;
+            if let Some(attendue) = condition.version_attendue {
+                let version_actuelle = actuelle.unwrap_or(0) as u64;
+                if attendue != version_actuelle {
+                    return Err(Erreur::Conflit { version_actuelle });
+                }
+            }
+            if actuelle.is_none() {
                 let total: i64 = tx.query_row("SELECT count(*) FROM donnees WHERE utilisateur_id = ?1", [&session.utilisateur_id], |l| l.get(0))?;
                 if total >= NOMS_MAX {
                     return Err(Erreur::requete("Trop de données enregistrées."));
