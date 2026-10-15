@@ -11,7 +11,7 @@ use std::{
 };
 
 /// Version du schéma, dans `PRAGMA user_version`. Une migration = une entrée de `MIGRATIONS`.
-const MIGRATIONS: &[&str] = &[include_str!("schema_1.sql")];
+const MIGRATIONS: &[&str] = &[include_str!("schema_1.sql"), include_str!("schema_2.sql")];
 
 #[derive(Clone)]
 pub struct Base {

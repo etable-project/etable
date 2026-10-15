@@ -216,6 +216,9 @@ pub async fn connexion(
 }
 
 pub async fn deconnexion(State(etat): State<Etat>, session: Session) -> Resultat<StatusCode> {
+    if session.par_cle {
+        return Err(Erreur::Interdit);
+    }
     etat.base
         .executer(move |c| {
             c.execute(
@@ -254,6 +257,9 @@ pub async fn changer_mot_de_passe(
     session: Session,
     Json(requete): Json<ChangementMotDePasse>,
 ) -> Resultat<StatusCode> {
+    if session.par_cle {
+        return Err(Erreur::Interdit);
+    }
     securite::controler_mot_de_passe(&requete.nouveau, &session.nom).map_err(Erreur::Requete)?;
     let id = session.utilisateur_id.clone();
     let actuel_hache: String = etat

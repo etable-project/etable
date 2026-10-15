@@ -8,6 +8,7 @@ pub mod erreur;
 pub mod etat;
 mod hote_plugins;
 mod routes_admin;
+mod routes_cles;
 mod routes_documents;
 mod routes_donnees;
 mod routes_evenements;
@@ -129,6 +130,8 @@ pub fn application(etat: Etat) -> Router {
             post(routes_session::connexion).delete(routes_session::deconnexion),
         )
         .route("/moi", get(routes_session::moi))
+        .route("/cles", get(routes_cles::lister).post(routes_cles::ajouter))
+        .route("/cles/{id}", axum::routing::delete(routes_cles::supprimer))
         .route("/evenements", get(routes_evenements::flux))
         .route(
             "/moi/mot-de-passe",

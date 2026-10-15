@@ -47,7 +47,17 @@ export const admin = (client: ClientApi) => ({
   exporterBase: () => client.fichier("GET", "/api/admin/export"),
 });
 
+export interface CleAcces {
+  id: string;
+  nom: string;
+  cree: number;
+  derniereUtilisation: number | null;
+}
+
 export const compte = (client: ClientApi) => ({
+  cles: () => client.requete<CleAcces[]>("GET", "/api/cles"),
+  ajouterCle: (nom: string, cle: string) => client.requete<{ id: string; nom: string }>("POST", "/api/cles", { nom, cle }),
+  retirerCle: (id: string) => client.requete<void>("DELETE", `/api/cles/${encodeURIComponent(id)}`),
   changerMotDePasse: (actuel: string, nouveau: string) =>
     client.requete<void>("POST", "/api/moi/mot-de-passe", { actuel, nouveau }),
   deconnecter: () => client.requete<void>("DELETE", "/api/session"),
