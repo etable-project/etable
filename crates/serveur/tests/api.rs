@@ -707,6 +707,92 @@ async fn un_utilisateur_ne_voit_ni_ne_touche_les_donnees_d_un_autre() {
 // ——— Données et réglages ———
 
 #[tokio::test]
+async fn cles_d_acces() {
+    let b = Banc::nouveau().await;
+    let admin = b.installer().await;
+    let (_, alice) = b.utilisateur(&admin, "alice").await;
+    let cle = format!("qk_{}", "a1".repeat(30));
+    let autre = format!("qk_{}", "b2".repeat(30));
+
+    let court = json!({ "nom": "x", "cle": "court" });
+    assert_eq!(
+        b.post("/api/cles", Some(&alice), court).await.statut,
+        StatusCode::BAD_REQUEST
+    );
+    let ajout = b
+        .post(
+            "/api/cles",
+            Some(&alice),
+            json!({ "nom": "Assistant", "cle": cle }),
+        )
+        .await;
+    assert_eq!(ajout.statut, StatusCode::CREATED);
+    let doublon = b
+        .post(
+            "/api/cles",
+            Some(&alice),
+            json!({ "nom": "Autre", "cle": cle }),
+        )
+        .await;
+    assert_eq!(doublon.statut, StatusCode::BAD_REQUEST);
+
+    // la clé ouvre les données d'alice, sans mot de passe
+    b.put("/api/donnees/plugin.x", Some(&alice), json!({ "n": 1 }))
+        .await;
+    assert_eq!(
+        b.get("/api/donnees/plugin.x", Some(&cle)).await.json()["n"],
+        1
+    );
+    assert_eq!(b.get("/api/moi", Some(&cle)).await.json()["nom"], "alice");
+    let ecrit = b
+        .put(
+            "/api/donnees/plugin.x?versionAttendue=1",
+            Some(&cle),
+            json!({ "n": 2 }),
+        )
+        .await;
+    assert_eq!(ecrit.json()["version"], 2);
+
+    // mais ni administration, ni gestion des clés, ni mot de passe
+    assert_eq!(
+        b.get("/api/admin/utilisateurs", Some(&cle)).await.statut,
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        b.get("/api/cles", Some(&cle)).await.statut,
+        StatusCode::FORBIDDEN
+    );
+    let nouvelle = json!({ "nom": "y", "cle": autre });
+    assert_eq!(
+        b.post("/api/cles", Some(&cle), nouvelle).await.statut,
+        StatusCode::FORBIDDEN
+    );
+    let mdp = json!({ "actuel": "x", "nouveau": "un-autre-mot-de-passe-long" });
+    assert_eq!(
+        b.post("/api/moi/mot-de-passe", Some(&cle), mdp)
+            .await
+            .statut,
+        StatusCode::FORBIDDEN
+    );
+
+    // alice voit sa clé, jamais la clé elle-même ; la retirer coupe l'accès
+    let liste = b.get("/api/cles", Some(&alice)).await.json();
+    assert_eq!(liste[0]["nom"], "Assistant");
+    assert!(liste[0].get("cle").is_none());
+    let id = liste[0]["id"].as_str().unwrap().to_string();
+    assert_eq!(
+        b.delete(&format!("/api/cles/{id}"), Some(&alice))
+            .await
+            .statut,
+        StatusCode::NO_CONTENT
+    );
+    assert_eq!(
+        b.get("/api/moi", Some(&cle)).await.statut,
+        StatusCode::UNAUTHORIZED
+    );
+}
+
+#[tokio::test]
 async fn ecriture_de_donnees_avec_version_attendue() {
     let b = Banc::nouveau().await;
     let admin = b.installer().await;

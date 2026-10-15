@@ -43,6 +43,8 @@ pub struct Session {
     pub nom: String,
     pub role: Role,
     pub empreinte: String,
+    /// Vrai si la requête vient d'une clé d'accès (assistant, script) et non d'une connexion par mot de passe.
+    pub par_cle: bool,
 }
 
 fn jeton_de(parts: &Parts) -> Option<String> {
@@ -79,7 +81,38 @@ impl FromRequestParts<Etat> for Session {
                     )
                     .optional()?;
                 let Some((id, nom, role, cree, derniere)) = ligne else {
-                    return Ok(None);
+                    // pas une session : une clé d'accès enregistrée par l'utilisateur ? (jamais administrateur, sans expiration)
+                    let cle = c
+                        .query_row(
+                            "SELECT u.id, u.nom, k.derniere_utilisation \
+                             FROM cles_acces k JOIN utilisateurs u ON u.id = k.utilisateur_id \
+                             WHERE k.empreinte = ?1 AND u.actif = 1",
+                            [&empreinte],
+                            |l| {
+                                Ok((
+                                    l.get::<_, String>(0)?,
+                                    l.get::<_, String>(1)?,
+                                    l.get::<_, Option<i64>>(2)?,
+                                ))
+                            },
+                        )
+                        .optional()?;
+                    let Some((id, nom, derniere)) = cle else {
+                        return Ok(None);
+                    };
+                    if maintenant - derniere.unwrap_or(0) > 60_000 {
+                        c.execute(
+                            "UPDATE cles_acces SET derniere_utilisation = ?1 WHERE empreinte = ?2",
+                            rusqlite::params![maintenant, empreinte],
+                        )?;
+                    }
+                    return Ok(Some(Session {
+                        utilisateur_id: id,
+                        nom,
+                        role: Role::Utilisateur,
+                        empreinte,
+                        par_cle: true,
+                    }));
                 };
                 let trop_vieille = maintenant - cree > SESSION_MAX.as_millis() as i64;
                 let inactive = maintenant - derniere > SESSION_INACTIVITE.as_millis() as i64;
@@ -99,6 +132,7 @@ impl FromRequestParts<Etat> for Session {
                     nom,
                     role: Role::depuis_texte(&role),
                     empreinte,
+                    par_cle: false,
                 }))
             })
             .await?;

@@ -3,7 +3,7 @@
   const nomApp = distribution.name;
   // Paramètres → Serveur : connexion, compte, mot de passe, données (docs/16 et 17).
   import { api, clientServeur, fondServeur } from "$lib/api";
-  import { compte } from "$lib/serveur/admin";
+  import { compte, type CleAcces } from "$lib/serveur/admin";
   import { ecrireConnexion, installerServeur, lireConnexion, normaliserAdresse, ouvrirSession, phraseErreur, sonderServeur } from "$lib/connexion";
   import { importer, lireLocal, apercu, type Bilan } from "$lib/serveur/importer";
   import type { ExportComplet } from "$lib/fond/types";
@@ -113,6 +113,46 @@
     importEnCours = false;
   }
 
+  // ——— Clés d'accès (assistant personnel, scripts) ———
+  let cles = $state<CleAcces[]>([]);
+  let nomCle = $state("");
+  let valeurCle = $state("");
+  let messageCle = $state("");
+  async function chargerCles(): Promise<void> {
+    if (!clientServeur) return;
+    try {
+      cles = await compte(clientServeur).cles();
+    } catch {
+      cles = [];
+    }
+  }
+  $effect(() => {
+    if (clientServeur) void chargerCles();
+  });
+  async function ajouterCle(event: Event): Promise<void> {
+    event.preventDefault();
+    messageCle = "";
+    if (!clientServeur) return;
+    try {
+      await compte(clientServeur).ajouterCle(nomCle.trim(), valeurCle.trim());
+      nomCle = valeurCle = "";
+      messageCle = "Clé enregistrée : le programme qui l'a fabriquée peut maintenant lire et modifier vos données.";
+      await chargerCles();
+    } catch (e) {
+      messageCle = phraseErreur(e);
+    }
+  }
+  async function retirerCle(id: string): Promise<void> {
+    if (!clientServeur) return;
+    try {
+      await compte(clientServeur).retirerCle(id);
+      await chargerCles();
+    } catch (e) {
+      messageCle = phraseErreur(e);
+    }
+  }
+  const dateCourte = (ms: number | null) => (ms ? new Date(ms).toLocaleString("fr-FR") : "jamais");
+
   const ROLES = { admin: "administrateur", utilisateur: "utilisateur" } as const;
 </script>
 
@@ -177,6 +217,23 @@
       <label>Confirmer<input class="text-input" type="password" bind:value={confirmation} autocomplete="new-password" required /></label>
       <div class="buttons"><button class="btn" type="submit">Changer le mot de passe</button></div>
       {#if messageMdp}<p class="hint" role="status">{messageMdp}</p>{/if}
+    </form>
+  </div>
+
+  <div class="box">
+    <h3>Clés d'accès</h3>
+    <p>Une clé permet à un programme de confiance (par exemple votre assistant personnel) de lire et modifier vos données sans votre mot de passe. Elle n'a jamais les droits d'administration, et vous pouvez la retirer à tout moment.</p>
+    {#each cles as c (c.id)}
+      <p class="hint">
+        <b>{c.nom}</b> — ajoutée le {dateCourte(c.cree)}, dernier usage : {dateCourte(c.derniereUtilisation)}
+        <button class="btn" onclick={() => void retirerCle(c.id)}>Retirer</button>
+      </p>
+    {/each}
+    <form class="champs" onsubmit={ajouterCle}>
+      <label>Nom<input class="text-input" bind:value={nomCle} placeholder="Assistant (cerveau)" required /></label>
+      <label>Clé fournie par le programme<input class="text-input" bind:value={valeurCle} placeholder="qk_…" autocomplete="off" required /></label>
+      <div class="buttons"><button class="btn" type="submit">Enregistrer la clé</button></div>
+      {#if messageCle}<p class="hint" role="status">{messageCle}</p>{/if}
     </form>
   </div>
 
