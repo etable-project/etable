@@ -715,18 +715,43 @@ async fn ecriture_de_donnees_avec_version_attendue() {
 
     // rien d'enregistré : version 0 ; « attendre 0 » crée, et une seconde écriture « attendant 0 » est refusée
     assert_eq!(b.get(url, Some(&alice)).await.en_tetes["x-version"], "0");
-    let v1 = b.put(&format!("{url}?versionAttendue=0"), Some(&alice), json!({ "n": 1 })).await;
+    let v1 = b
+        .put(
+            &format!("{url}?versionAttendue=0"),
+            Some(&alice),
+            json!({ "n": 1 }),
+        )
+        .await;
     assert_eq!(v1.json()["version"], 1);
-    let perdu = b.put(&format!("{url}?versionAttendue=0"), Some(&alice), json!({ "n": 2 })).await;
+    let perdu = b
+        .put(
+            &format!("{url}?versionAttendue=0"),
+            Some(&alice),
+            json!({ "n": 2 }),
+        )
+        .await;
     assert_eq!(perdu.statut, StatusCode::CONFLICT);
     assert_eq!(perdu.json()["versionActuelle"], 1);
-    assert_eq!(b.get(url, Some(&alice)).await.json()["n"], 1, "la donnée refusée n'a rien écrasé");
+    assert_eq!(
+        b.get(url, Some(&alice)).await.json()["n"],
+        1,
+        "la donnée refusée n'a rien écrasé"
+    );
 
     // la bonne version passe ; sans condition, l'écriture écrase toujours (anciens clients)
-    let v2 = b.put(&format!("{url}?versionAttendue=1"), Some(&alice), json!({ "n": 3 })).await;
+    let v2 = b
+        .put(
+            &format!("{url}?versionAttendue=1"),
+            Some(&alice),
+            json!({ "n": 3 }),
+        )
+        .await;
     assert_eq!(v2.json()["version"], 2);
     assert_eq!(b.get(url, Some(&alice)).await.en_tetes["x-version"], "2");
-    assert_eq!(b.put(url, Some(&alice), json!({ "n": 4 })).await.json()["version"], 3);
+    assert_eq!(
+        b.put(url, Some(&alice), json!({ "n": 4 })).await.json()["version"],
+        3
+    );
 }
 
 #[tokio::test]
