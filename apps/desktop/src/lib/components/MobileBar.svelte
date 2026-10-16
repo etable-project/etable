@@ -4,15 +4,26 @@
   import { tabs } from "$lib/state/tabs.svelte";
   import { retourMobile } from "$lib/state/retour";
   import { describeView } from "$lib/views";
+  import { getPlugin } from "$lib/plugins/registry.svelte";
+  import { openPluginSettings } from "$lib/pluginSettings";
   import Icon from "./Icon.svelte";
 
   const info = $derived(tabs.active ? describeView(tabs.active.view) : null);
+  const reglable = $derived.by(() => {
+    const v = tabs.active?.view;
+    const p = v?.kind === "page" ? getPlugin(v.pluginId) : undefined;
+    return p && (p.parameters.length || p.settings.length) ? p : null;
+  });
 </script>
 
 <header class="bar">
   <button class="btn-icon" onclick={retourMobile} aria-label="Retour"><Icon name="back" size={22} /></button>
   <div class="title">{info?.title ?? ""}</div>
-  <div class="btn-icon" aria-hidden="true"></div>
+  {#if reglable}
+    <button class="btn-icon" onclick={() => openPluginSettings(reglable.id)} aria-label="Paramètres de {reglable.name}"><Icon name="settings" size={20} /></button>
+  {:else}
+    <div class="btn-icon" aria-hidden="true"></div>
+  {/if}
 </header>
 
 <style>
