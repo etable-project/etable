@@ -2,8 +2,8 @@
 
 use clap::Parser;
 use etabli_serveur::{
-    application, application_plugins, base::Base, cle_publique_officielle, mettre_a_jour_plugins, preparer_installation,
-    Config, Interne, ModelePlugins,
+    application, application_plugins, base::Base, cle_publique_officielle, mettre_a_jour_plugins,
+    preparer_installation, Config, Interne, ModelePlugins,
 };
 use std::{net::SocketAddr, path::PathBuf};
 

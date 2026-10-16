@@ -514,9 +514,22 @@ pub async fn exporter(State(etat): State<Etat>, Admin(admin): Admin) -> Resultat
 
 /// Compare deux versions « 1.2.3 » nombre par nombre (une partie absente ou illisible vaut 0).
 fn plus_recente(a: &str, b: &str) -> bool {
-    let n = |v: &str| -> Vec<u64> { v.split(['.', '-', '+']).take(3).map(|x| x.parse().unwrap_or(0)).collect() };
+    let n = |v: &str| -> Vec<u64> {
+        v.split(['.', '-', '+'])
+            .take(3)
+            .map(|x| x.parse().unwrap_or(0))
+            .collect()
+    };
     let (a, b) = (n(a), n(b));
-    (0..3).map(|i| (a.get(i).copied().unwrap_or(0), b.get(i).copied().unwrap_or(0))).find(|(x, y)| x != y).is_some_and(|(x, y)| x > y)
+    (0..3)
+        .map(|i| {
+            (
+                a.get(i).copied().unwrap_or(0),
+                b.get(i).copied().unwrap_or(0),
+            )
+        })
+        .find(|(x, y)| x != y)
+        .is_some_and(|(x, y)| x > y)
 }
 
 /// Au démarrage : met à jour les plugins DÉJÀ installés depuis les paquets `.etapl` livrés avec le serveur, quand ils sont plus récents.
@@ -525,13 +538,18 @@ fn plus_recente(a: &str, b: &str) -> bool {
 pub(crate) async fn mettre_a_jour_depuis(etat: &Etat, dossier: &CheminFs) -> Vec<String> {
     let mut rapport = Vec::new();
     let Ok(entrees) = fs::read_dir(dossier) else {
-        return vec![format!("dossier des paquets illisible : {}", dossier.display())];
+        return vec![format!(
+            "dossier des paquets illisible : {}",
+            dossier.display()
+        )];
     };
     let installes: Vec<(String, String)> = match etat
         .base
         .executer(|c| {
             let mut r = c.prepare("SELECT id, version FROM plugins")?;
-            let v = r.query_map([], |l| Ok((l.get(0)?, l.get(1)?)))?.collect::<Result<Vec<_>, _>>()?;
+            let v = r
+                .query_map([], |l| Ok((l.get(0)?, l.get(1)?)))?
+                .collect::<Result<Vec<_>, _>>()?;
             Ok(v)
         })
         .await
@@ -539,26 +557,41 @@ pub(crate) async fn mettre_a_jour_depuis(etat: &Etat, dossier: &CheminFs) -> Vec
         Ok(v) => v,
         Err(e) => return vec![format!("liste des plugins illisible : {e:?}")],
     };
-    let mut chemins: Vec<_> = entrees.filter_map(Result::ok).map(|e| e.path()).filter(|p| p.extension().is_some_and(|x| x == "etapl")).collect();
+    let mut chemins: Vec<_> = entrees
+        .filter_map(Result::ok)
+        .map(|e| e.path())
+        .filter(|p| p.extension().is_some_and(|x| x == "etapl"))
+        .collect();
     chemins.sort();
     for chemin in chemins {
-        let nom = chemin.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+        let nom = chemin
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_default();
         let (cle, racine) = (etat.config.cle_publique.clone(), etat.dossier_plugins());
         let installes = installes.clone();
-        let resultat = tokio::task::spawn_blocking(move || -> Result<Option<(String, String, Value)>, String> {
-            let octets = fs::read(&chemin).map_err(|e| e.to_string())?;
-            let zip = ouvrir_paquet(&octets, &cle)?;
-            let fichiers = fichiers_du_plugin(&zip)?;
-            let (id, manifeste) = lire_manifeste(&fichiers)?;
-            let version = manifeste.get("version").and_then(Value::as_str).unwrap_or("0.0.0").chars().take(40).collect::<String>();
-            match installes.iter().find(|(i, _)| *i == id) {
-                Some((_, actuelle)) if plus_recente(&version, actuelle) => {
-                    mettre_en_place(&racine, &id, &fichiers).map_err(|e| format!("{e:?}"))?;
-                    Ok(Some((id, version, manifeste)))
+        let resultat = tokio::task::spawn_blocking(
+            move || -> Result<Option<(String, String, Value)>, String> {
+                let octets = fs::read(&chemin).map_err(|e| e.to_string())?;
+                let zip = ouvrir_paquet(&octets, &cle)?;
+                let fichiers = fichiers_du_plugin(&zip)?;
+                let (id, manifeste) = lire_manifeste(&fichiers)?;
+                let version = manifeste
+                    .get("version")
+                    .and_then(Value::as_str)
+                    .unwrap_or("0.0.0")
+                    .chars()
+                    .take(40)
+                    .collect::<String>();
+                match installes.iter().find(|(i, _)| *i == id) {
+                    Some((_, actuelle)) if plus_recente(&version, actuelle) => {
+                        mettre_en_place(&racine, &id, &fichiers).map_err(|e| format!("{e:?}"))?;
+                        Ok(Some((id, version, manifeste)))
+                    }
+                    _ => Ok(None),
                 }
-                _ => Ok(None),
-            }
-        })
+            },
+        )
         .await
         .map_err(|e| e.to_string())
         .and_then(|r| r);
