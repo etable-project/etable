@@ -105,6 +105,7 @@
       sections: [
         "general",
         "apparence",
+        "plugins",
         ...(distribution.ia ? (["ia"] as const) : []),
         ...(api.capacites.fenetresNatives ? (["raccourcis"] as const) : []),
         "serveur",
@@ -113,7 +114,7 @@
         "a-propos",
       ],
     },
-    { title: "Plugins", sections: [...(distribution.trajets ? (["trajets"] as const) : []), "plugins"] },
+    { title: "Plugins", sections: [...(distribution.trajets ? (["trajets"] as const) : [])] },
   ];
 
   /**
