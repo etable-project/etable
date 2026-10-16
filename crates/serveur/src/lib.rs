@@ -222,6 +222,11 @@ pub fn application(etat: Etat) -> Router {
 
 /// Au premier lancement (aucun utilisateur), fabrique le code d'installation, n'en garde que
 /// l'empreinte en base et le renvoie pour affichage dans la console.
+/// Met à jour les plugins installés depuis les paquets `.etapl` d'un dossier (livrés avec le serveur), s'ils sont plus récents.
+pub async fn mettre_a_jour_plugins(etat: &Etat, dossier: &std::path::Path) -> Vec<String> {
+    routes_admin::mettre_a_jour_depuis(etat, dossier).await
+}
+
 pub async fn preparer_installation(etat: &Etat) -> erreur::Resultat<Option<String>> {
     etat.base
         .executer(|c| {

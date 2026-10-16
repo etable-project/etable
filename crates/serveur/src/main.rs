@@ -2,8 +2,8 @@
 
 use clap::Parser;
 use etabli_serveur::{
-    application, application_plugins, base::Base, cle_publique_officielle, preparer_installation,
-    Config, Interne, ModelePlugins,
+    application, application_plugins, base::Base, cle_publique_officielle, mettre_a_jour_plugins,
+    preparer_installation, Config, Interne, ModelePlugins,
 };
 use std::{net::SocketAddr, path::PathBuf};
 
@@ -17,6 +17,10 @@ struct Arguments {
     /// Dossier des données (base etabli.sqlite et plugins/). À sauvegarder.
     #[arg(long, env = "ETABLI_DONNEES", default_value = "donnees")]
     donnees: PathBuf,
+
+    /// Dossier de paquets `.etapl` livrés avec le serveur : au démarrage, les plugins installés sont mis à jour s'ils y sont plus récents.
+    #[arg(long, env = "ETABLI_PAQUETS")]
+    paquets: Option<PathBuf>,
 
     /// Adresse d'écoute. Par défaut, seulement cette machine : pour l'ouvrir au réseau, placez le
     /// serveur derrière un proxy inverse HTTPS ou un VPN (voir docs/17).
@@ -93,6 +97,12 @@ async fn lancer(args: Arguments) -> Result<(), String> {
         eprintln!(
             "Code d'installation (à saisir une seule fois pour créer l'administrateur) : {code}\n"
         );
+    }
+
+    if let Some(dossier) = &args.paquets {
+        for ligne in mettre_a_jour_plugins(&etat, dossier).await {
+            eprintln!("Plugins : {ligne}");
+        }
     }
 
     let ecouteur = tokio::net::TcpListener::bind(args.ecoute)
