@@ -20,6 +20,7 @@ import {
   type AiImage,
   type AiResult,
   type RouteResult,
+  type RemoteResult,
   type WidgetSummary,
   type Reminder,
   type RemindersResult,
@@ -59,6 +60,7 @@ export type {
   AiImage,
   AiResult,
   RouteResult,
+  RemoteResult,
   WidgetSummary,
   WidgetCases,
   RemindersResult,
@@ -178,6 +180,13 @@ export interface Etabli<T> {
     calculer(options: { vers: string; depuis?: string; arriveeAvant?: number }): Promise<RouteResult>;
     ouvrirWaze(destination: string): void;
   };
+  /**
+   * Service distant de la distribution (permission `distant`) : appelle un de ses outils. L'adresse et la clé restent dans
+   * les Paramètres du moteur ; le plugin ne les voit jamais. Ne jette jamais : `{ ok: true, texte }` ou `{ ok: false, code, message }`.
+   */
+  readonly distant: {
+    appeler(outil: string, args?: unknown): Promise<RemoteResult>;
+  };
   readonly ai: {
     extraire(options: { instruction: string; images?: AiImage[]; schema?: unknown; recherche?: boolean }): Promise<AiResult>;
   };
@@ -242,6 +251,21 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
   const pendingRoutes = new Map<string, (result: RouteResult) => void>();
   let routeCounter = 0;
   /** Demande un temps de trajet au moteur (jamais d'exception ; au plus 40 s). */
+  const pendingRemote = new Map<string, (result: RemoteResult) => void>();
+  let remoteCounter = 0;
+  const askRemote = (outil: string, args: unknown): Promise<RemoteResult> =>
+    new Promise((resolve) => {
+      const id = `d${++remoteCounter}`;
+      const timer = setTimeout(() => {
+        pendingRemote.delete(id);
+        resolve({ ok: false, code: "reseau", message: "Le service distant n'a pas répondu à temps." });
+      }, 60_000);
+      pendingRemote.set(id, (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      });
+      send({ type: "remote", id, outil, args: args === undefined ? {} : JSON.parse(JSON.stringify(args)) } as PluginToHost);
+    });
   const askRoute = (options: { vers: string; depuis?: string; arriveeAvant?: number }): Promise<RouteResult> =>
     new Promise((resolve) => {
       const id = `t${++routeCounter}`;
@@ -420,6 +444,9 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
       calculer: (options) => askRoute(options),
       ouvrirWaze: (destination) => send({ type: "openMap", destination: String(destination) }),
     },
+    distant: {
+      appeler: (outil, args) => askRemote(String(outil), args),
+    },
     ai: {
       extraire: (options) => askAi({ ...options, schema: options.schema === undefined ? undefined : JSON.parse(JSON.stringify(options.schema)) }),
     },
@@ -479,6 +506,12 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
         const fini = pendingRoutes.get(message.id);
         pendingRoutes.delete(message.id);
         fini?.(message.result);
+        break;
+      }
+      case "remoteResult": {
+        const done = pendingRemote.get(message.id);
+        pendingRemote.delete(message.id);
+        done?.(message.result);
         break;
       }
       case "aiResult": {

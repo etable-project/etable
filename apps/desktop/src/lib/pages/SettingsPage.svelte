@@ -19,6 +19,7 @@
   import Switch from "$lib/components/Switch.svelte";
   import IaSection from "./IaSection.svelte";
   import TrajetsSection from "./TrajetsSection.svelte";
+  import DistantSection from "./DistantSection.svelte";
   import Tile from "$lib/components/Tile.svelte";
   import { PLUGINS, getPageByKey, pluginUrl } from "$lib/plugins/registry.svelte";
   import { openPluginSettings, pluginSection } from "$lib/pluginSettings";
@@ -61,6 +62,11 @@
       label: "Trajets",
       title: "Trajets",
       lead: "Votre clé TomTom et votre adresse de départ, pour les temps de trajet avec la circulation.",
+    },
+    distant: {
+      label: distribution.distant?.nom ?? "Service distant",
+      title: distribution.distant?.nom ?? "Service distant",
+      lead: "La clé d'accès au service distant de l'application. Elle reste sur cet appareil ; les plugins l'utilisent sans la voir.",
     },
     raccourcis: {
       label: "Raccourcis",
@@ -114,7 +120,7 @@
         "a-propos",
       ],
     },
-    { title: "Plugins", sections: [...(distribution.trajets ? (["trajets"] as const) : [])] },
+    { title: "Plugins", sections: [...(distribution.trajets ? (["trajets"] as const) : []), ...(distribution.distant ? (["distant"] as const) : [])] },
   ];
 
   /**
@@ -479,6 +485,8 @@
         </div>
       {:else if active === "trajets"}
         <TrajetsSection />
+      {:else if active === "distant"}
+        <DistantSection />
       {:else if active === "ia"}
         <IaSection />
       {:else if active === "raccourcis"}

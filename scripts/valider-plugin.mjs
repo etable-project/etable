@@ -57,6 +57,7 @@ const APPELS_PERMISSION = [
   [/\breminders\s*\??\.\s*(set|clear|state)\b/, "notifications"],
   [/\bai\s*\??\.\s*extraire\b/, "ia"],
   [/\btrajets\s*\??\.\s*calculer\b/, "trajets"],
+  [/\bdistant\s*\??\.\s*appeler\b/, "distant"],
 ];
 
 /** Permissions connues : celles de apps/desktop/src/lib/plugins/permissions.ts (une seule source). */
