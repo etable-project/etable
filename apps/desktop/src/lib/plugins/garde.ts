@@ -155,6 +155,7 @@ const PERMISSION_REQUISE: Record<string, string | null> = {
   reminders: "notifications",
   ai: "ia",
   route: "trajets",
+  remote: "distant",
   openMap: null,
   widgetSummary: null,
   // La permission `appelle:<service>:<accès>` dépend du service : contrôlée plus bas, puis par le routage.
@@ -264,6 +265,12 @@ export function controler(brut: unknown, ctx: Contexte): Verdict {
         if (brut.schema !== undefined && !donneesValides(brut.schema)) return refus("schéma trop volumineux ou illisible");
         if (brut.recherche !== undefined && typeof brut.recherche !== "boolean") return refus("« recherche » doit valoir vrai ou faux");
         return bon({ type, id: brut.id, instruction: brut.instruction, ...(images ? { images } : {}), ...(brut.schema !== undefined ? { schema: brut.schema } : {}), ...(brut.recherche === true ? { recherche: true } : {}) });
+      }
+      case "remote": {
+        if (!estTexte(brut.id, 64) || !ID_APPEL.test(brut.id)) return refus("identifiant de demande invalide");
+        if (!estTexte(brut.outil, 64) || !/^[a-z][a-z0-9_]{0,63}$/.test(brut.outil)) return refus("nom d'outil invalide");
+        if (!donneesValides(brut.args)) return refus("arguments trop volumineux ou illisibles");
+        return bon({ type, id: brut.id, outil: brut.outil, args: brut.args });
       }
       case "route": {
         if (!estTexte(brut.id, 64) || !ID_APPEL.test(brut.id)) return refus("identifiant de demande invalide");

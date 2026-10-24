@@ -23,6 +23,8 @@ export interface Distribution {
   ia: boolean;
   /** Trajets en voiture (clé TomTom de l'utilisateur dans Paramètres, permission `trajets` des plugins). La distribution doit autoriser l'adresse de TomTom dans la CSP. */
   trajets: boolean;
+  /** Service distant (serveur MCP) que les plugins qui ont la permission `distant` peuvent appeler ; la clé se saisit dans Paramètres. La distribution doit autoriser son adresse dans la CSP. */
+  distant: { nom: string; url: string } | null;
   /** Barre d'onglets : faux, l'application n'a qu'une page à la fois et la barre ne montre que le titre de la page. */
   tabs: boolean;
   /** Icônes propres à la distribution, par nom (« calendrier ») : un plugin de la distribution peut les donner à ses pages. Même forme que le logo, mais remplies (`currentColor`). */
@@ -34,7 +36,7 @@ ull : pas de mise à jour sur Android. */
   androidUpdateUrl: string | null;
 }
 
-export const DISTRIBUTION_DEFAUT: Distribution = { name: "Établi", pluginsPage: true, themes: null, logo: null, logoPlein: false, logoViewBox: "0 0 24 24", accueilCouleur: null, apercu: "favoris", ia: false, trajets: false, tabs: true, icons: {}, tuilesNues: false, androidUpdateUrl: null };
+export const DISTRIBUTION_DEFAUT: Distribution = { name: "Établi", pluginsPage: true, themes: null, logo: null, logoPlein: false, logoViewBox: "0 0 24 24", accueilCouleur: null, apercu: "favoris", ia: false, trajets: false, distant: null, tabs: true, icons: {}, tuilesNues: false, androidUpdateUrl: null };
 
 const objet = (v: unknown): Record<string, unknown> | null => (typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 const COULEUR = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\))$/i;
@@ -66,6 +68,12 @@ function lireIcones(brut: unknown): Record<string, string> {
   return sortie;
 }
 
+function lireDistant(brut: unknown): Distribution["distant"] {
+  const o = objet(brut);
+  if (!o || typeof o.url !== "string" || !/^https:\/\/[^\s]{1,300}$/.test(o.url.trim())) return null;
+  return { nom: typeof o.nom === "string" && o.nom.trim() ? o.nom.trim().slice(0, 40) : "Service distant", url: o.url.trim() };
+}
+
 export function lireDistribution(brut: unknown): Distribution {
   const o = objet(brut);
   if (!o) return { ...DISTRIBUTION_DEFAUT };
@@ -83,6 +91,7 @@ export function lireDistribution(brut: unknown): Distribution {
     apercu: o.apercu === "widgets" ? "widgets" : "favoris",
     ia: o.ia === true,
     trajets: o.trajets === true,
+    distant: lireDistant(o.distant),
     tabs: o.tabs !== false,
     icons: lireIcones(o.icons),
     tuilesNues: o.tuilesNues === true,

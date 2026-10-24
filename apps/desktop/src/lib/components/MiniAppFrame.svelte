@@ -6,6 +6,7 @@
     PROTOCOL_VERSION,
     type AiResult,
     type RouteResult,
+    type RemoteResult,
     type DocumentSnapshot,
     type HostToPlugin,
     type Incoming,
@@ -19,6 +20,7 @@
   import { frameShortcuts } from "$lib/shortcuts";
   import { sandboxDe, lireTheme } from "$lib/plugins/cadre";
   import { calculerTrajet, urlWaze } from "$lib/trajets";
+  import { appelerDistant } from "$lib/distant";
   import { controler, erreurService, idAppel, type Contexte } from "$lib/plugins/garde";
   import { connues, estStrict } from "$lib/plugins/permissions";
   import { getPlugin } from "$lib/plugins/registry.svelte";
@@ -149,6 +151,15 @@
             ? demander(demande)
             : Promise.resolve<AiResult>({ ok: false, code: "non_configure", message: "L'IA n'est pas disponible dans cette application." });
           void reponse.then((result) => send({ type: "aiResult", id, result }));
+          break;
+        }
+        case "remote": {
+          // Permission « distant » déjà contrôlée par la garde ; seul l'hôte connaît l'adresse et la clé du service.
+          const id = message.id;
+          const reponse = distribution.distant
+            ? appelerDistant(message.outil, message.args)
+            : Promise.resolve<RemoteResult>({ ok: false, code: "non_configure", message: "Cette application n'a pas de service distant." });
+          void reponse.then((result) => send({ type: "remoteResult", id, result }));
           break;
         }
         case "route": {

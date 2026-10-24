@@ -207,3 +207,17 @@ limites : [19](19-modele-de-menace-plugins.md).
 ## Trajets (permission `trajets`)
 
 `etabli.trajets.calculer({ vers, depuis?, arriveeAvant? })` returns `{ ok, minutes, distanceKm }` or `{ ok: false, code, message }`. The host geocodes both addresses and asks TomTom for a car route with live traffic, using the user's key and home address from *Settings → Trajets*; the plugin never sees the key. `arriveeAvant` (ms) targets an arrival time when it is in the future. `etabli.trajets.ouvrirWaze(destination)` opens Waze with the destination (no permission). The distribution enables it with `trajets: true` and must allow `https://api.tomtom.com` in `connect-src`.
+
+## Service distant (permission `distant`)
+
+A distribution can name one remote service, an MCP server such as Hameau's brain, in its `distribution.json`:
+`"distant": { "nom": "Cerveau", "url": "https://….ts.net/mcp" }` (the address must also be allowed in the Tauri CSP `connect-src`).
+The user pastes the access key in *Settings → <nom>*; it stays on the device. A plugin with the `distant` permission calls a tool:
+
+```ts
+const r = await etabli.distant.appeler("tasks_all", {});
+if (r.ok) console.log(JSON.parse(r.texte));
+else console.warn(r.code, r.message); // non_configure | refuse | reseau | erreur
+```
+
+The host sends `tools/call` with the key; the plugin never sees the address or the key. The call never throws (60 s timeout).

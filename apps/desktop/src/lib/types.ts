@@ -11,6 +11,7 @@ export type SettingsSection =
   | "raccourcis"
   | "ia"
   | "trajets"
+  | "distant"
   | "serveur"
   | "administration"
   | "alarmes"

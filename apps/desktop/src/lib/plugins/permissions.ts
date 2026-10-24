@@ -15,6 +15,7 @@ export const PERMISSIONS: PermissionInfo[] = [
   { id: "reglages", label: "Ouvrir les réglages d'un autre plugin" },
   { id: "notifications", label: "Programmer des rappels (notifications) sur le téléphone" },
   { id: "trajets", label: "Calculer des temps de trajet avec votre clé TomTom" },
+  { id: "distant", label: "Utiliser le service distant de l'application (adresse et clé dans Paramètres), par exemple le cerveau" },
   { id: "ia", label: "Envoyer des textes ou des photos au service d'intelligence artificielle que vous avez configuré (Paramètres)" },
 ];
 

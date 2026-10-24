@@ -139,7 +139,9 @@ export type HostToPlugin =
   /** Réponse du moteur à un message `ai` de cette mini-app. */
   | { type: "aiResult"; id: string; result: AiResult }
   /** Réponse du moteur à un message `route` de cette mini-app. */
-  | { type: "routeResult"; id: string; result: RouteResult };
+  | { type: "routeResult"; id: string; result: RouteResult }
+  /** Réponse du moteur à un message `remote` de cette mini-app. */
+  | { type: "remoteResult"; id: string; result: RemoteResult };
 
 export type PluginToHost =
   | { type: "update"; data: unknown }
@@ -173,6 +175,8 @@ export type PluginToHost =
   | { type: "ai"; id: string; instruction: string; images?: AiImage[]; schema?: unknown; recherche?: boolean }
   /** Temps de trajet en voiture avec la circulation (permission `trajets`) : `vers` (adresse), `depuis` (sinon le départ des réglages), `arriveeAvant` (instant, ms). */
   | { type: "route"; id: string; vers: string; depuis?: string; arriveeAvant?: number }
+  /** Appelle un outil du service distant de la distribution (permission `distant`), par exemple le cerveau de Hameau. */
+  | { type: "remote"; id: string; outil: string; args: unknown }
   /** Ouvre Waze (ou son site) avec la destination déjà remplie. */
   | { type: "openMap"; destination: string }
   /** Résumé d'un widget, pour l'écran d'accueil du téléphone (widget Android au modèle commun). */
@@ -188,6 +192,13 @@ export const AI_IMAGES_MAX = 4;
 /** Taille maximale d'une photo en base64 (caractères) : environ 4 Mo d'image. */
 export const AI_IMAGE_CARACTERES_MAX = 5_500_000;
 export const AI_INSTRUCTION_MAX = 8000;
+
+export type RemoteErrorCode = "non_configure" | "refuse" | "reseau" | "erreur";
+
+/** Réponse du service distant : le texte rendu par l'outil (souvent du JSON), ou la raison de l'échec en français. */
+export type RemoteResult = { ok: true; texte: string } | { ok: false; code: RemoteErrorCode; message: string };
+
+export const REMOTE_OUTIL = /^[a-z][a-z0-9_]{0,63}$/;
 
 export type AiErrorCode = "non_configure" | "refuse" | "limite" | "reseau" | "bloque" | "erreur";
 
