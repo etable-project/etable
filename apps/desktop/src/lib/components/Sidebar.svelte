@@ -40,12 +40,18 @@
   let renomme = $state<string | null>(null);
   let nomSaisi = $state("");
   let nouveauGroupe = $state(false);
+  /** Mode « modifier les groupes » (le stylo) : outils des groupes et création, cachés le reste du temps. */
+  let edition = $state(false);
   function validerRenommage(): void {
     if (renomme) settings.renameCategory(renomme, nomSaisi, pagesClassees);
     renomme = null;
   }
   function validerNouveau(): void {
-    if (nomSaisi.trim()) settings.createCategory(nomSaisi);
+    // le nouveau groupe se range à la fin de ceux qu'on voit déjà
+    if (nomSaisi.trim()) {
+      if (settings.sidebarCategories) settings.setCategoryOrder(groupes.map((g) => g.name));
+      settings.createCategory(nomSaisi);
+    }
     nouveauGroupe = false;
     nomSaisi = "";
   }
@@ -222,7 +228,6 @@
       </button>
     {/if}
 
-    <div class="section-label label">Pages</div>
     {#if !pages.length}
       <p class="none label">Aucune page : installez un plugin.</p>
     {/if}
@@ -260,34 +265,40 @@
             <input class="cat-saisie" bind:value={nomSaisi} maxlength="40" aria-label="Nouveau nom du groupe" use:focus
               onkeydown={(e) => (e.key === "Enter" ? validerRenommage() : e.key === "Escape" && (renomme = null))} onblur={validerRenommage} />
           {:else}
-            <button class="cat-nom" onclick={() => settings.toggleCategoryFolded(g.name)} ondblclick={() => ((renomme = g.name), (nomSaisi = g.name))} aria-expanded={!replie} title={replie ? "Déplier (double-clic : renommer)" : "Replier (double-clic : renommer)"}>
+            <button class="cat-nom" onclick={() => settings.toggleCategoryFolded(g.name)} aria-expanded={!replie} title={replie ? "Déplier" : "Replier"}>
               <span class="chevron" class:replie>▾</span>
               <span class="label">{g.name}</span>
             </button>
           {/if}
-          <span class="cat-outils label">
+          {#if edition}<span class="cat-outils label">
             <button class="cat-fleche" aria-label={`Renommer ${g.name}`} title="Renommer le groupe" onclick={() => ((renomme = g.name), (nomSaisi = g.name))}>✎</button>
             <button class="cat-fleche" aria-label={`Supprimer ${g.name}`} title="Supprimer le groupe (ses pages retournent à leur place d'origine)" onclick={() => settings.deleteCategory(g.name, pagesClassees)}>✕</button>
             <button class="cat-fleche" disabled={gi === 0} aria-label={`Monter ${g.name}`} title="Monter la catégorie" onclick={() => settings.setCategoryOrder(deplacerCategorie(groupes.map((x) => x.name), g.name, -1))}>↑</button>
             <button class="cat-fleche" disabled={gi === groupes.length - 1} aria-label={`Descendre ${g.name}`} title="Descendre la catégorie" onclick={() => settings.setCategoryOrder(deplacerCategorie(groupes.map((x) => x.name), g.name, 1))}>↓</button>
-          </span>
+          </span>{/if}
         </div>
         {#each g.items as { ref, key } (key)}
           {@render entree(ref, key, replie)}
         {/each}
         {#if g.items.length === 0 && !replie}<p class="groupe-vide label">Glissez une page ici</p>{/if}
       {/each}
+    {:else}
+      {#each pages as { ref, key } (key)}
+        {@render entree(ref, key, false)}
+      {/each}
+    {/if}
+    {#if edition}
       {#if nouveauGroupe}
         <input class="cat-saisie" bind:value={nomSaisi} maxlength="40" placeholder="Nom du groupe" aria-label="Nom du nouveau groupe" use:focus
           onkeydown={(e) => (e.key === "Enter" ? validerNouveau() : e.key === "Escape" && (nouveauGroupe = false))} onblur={validerNouveau} />
       {:else}
         <button class="nouveau-groupe label" onclick={() => ((nouveauGroupe = true), (nomSaisi = ""))} title="Créer un groupe dans la colonne">＋ Groupe</button>
       {/if}
-    {:else}
-      {#each pages as { ref, key } (key)}
-        {@render entree(ref, key, false)}
-      {/each}
     {/if}
+    <button class="stylo label" class:on={edition} onclick={() => ((edition = !edition), (nouveauGroupe = false), (renomme = null))}
+      title={edition ? "Terminer" : "Modifier les groupes (créer, renommer, supprimer, ranger)"} aria-label={edition ? "Terminer la modification des groupes" : "Modifier les groupes"} aria-pressed={edition}>
+      {edition ? "✓ Terminé" : "✎"}
+    </button>
   </nav>
 
   {#if rapide}
@@ -475,14 +486,6 @@
   .label {
     transition: opacity 0.12s ease-out;
   }
-  .section-label {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.8px;
-    color: var(--faint);
-    padding: 12px 8px 6px;
-  }
   .none {
     margin: 0;
     padding: 0 8px;
@@ -572,7 +575,49 @@
     display: flex;
   }
   .collapsed .categorie {
+    height: 0;
+    min-height: 0;
+    padding: 0;
+    margin: 6px 10px;
+    border-top: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .collapsed .categorie:first-of-type {
+    border-top: 0;
+    margin: 0;
+  }
+  .collapsed .categorie > *,
+  .collapsed .groupe-vide,
+  .collapsed .stylo,
+  .collapsed .nouveau-groupe,
+  .collapsed .cat-saisie {
     display: none;
+  }
+  .collapsed .nav {
+    scrollbar-width: none;
+  }
+  .collapsed .nav::-webkit-scrollbar {
+    display: none;
+  }
+  .stylo {
+    align-self: flex-start;
+    margin: 6px 6px 2px;
+    padding: 3px 9px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: none;
+    color: var(--faint);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .stylo:hover {
+    color: var(--text);
+    border-color: var(--border);
+  }
+  .stylo.on {
+    color: var(--accent);
+    border-color: var(--accent);
   }
   .cat-fleche {
     border: 0;
