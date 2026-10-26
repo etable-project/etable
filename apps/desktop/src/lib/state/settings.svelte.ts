@@ -1,6 +1,6 @@
 import { corrigerLettreGlobale } from "$lib/raccourciLettre";
 import { BOARD_DEFAUT, lireBoard } from "$lib/board";
-import { lireChoix, lireNoms } from "$lib/categories";
+import { lireChoix, lireNoms, nomGroupe, remplacerNom, renommerDansChoix, supprimerDansChoix, type PageClassee } from "$lib/categories";
 import { load, save } from "$lib/storage";
 import { SYSTEM_THEME, type Theme } from "$lib/themes";
 import type { BoardEntry } from "$lib/types";
@@ -44,6 +44,8 @@ interface Persisted {
   categoryOrder: string[];
   /** Catégories repliées dans la colonne. */
   foldedCategories: string[];
+  /** Groupes créés par l'utilisateur (montrés même vides). */
+  customCategories: string[];
   /** Raccourci global de l'aperçu rapide (le seul réglé par défaut). */
   quickShortcut: Shortcut;
   /** Raccourcis dans l'application, par action (voir shortcuts.ts). Aucun par défaut. */
@@ -68,6 +70,7 @@ const DEFAULTS: Persisted = {
   categoryOf: {},
   categoryOrder: [],
   foldedCategories: [],
+  customCategories: [],
   quickShortcut: DEFAULT_SHORTCUT,
   shortcuts: {},
   closeToTray: true,
@@ -88,6 +91,7 @@ class Settings {
   categoryOf = $state<Record<string, string>>({});
   categoryOrder = $state<string[]>([]);
   foldedCategories = $state<string[]>([]);
+  customCategories = $state<string[]>([]);
   quickShortcut =$state<Shortcut>(DEFAULTS.quickShortcut);
   shortcuts = $state<Record<string, Shortcut>>({});
   closeToTray = $state(DEFAULTS.closeToTray);
@@ -114,6 +118,7 @@ class Settings {
     this.categoryOf = lireChoix(saved.categoryOf);
     this.categoryOrder = lireNoms(saved.categoryOrder);
     this.foldedCategories = lireNoms(saved.foldedCategories);
+    this.customCategories = lireNoms(saved.customCategories);
     this.quickShortcut = corrigerLettreGlobale(saved.quickShortcut);
     this.shortcuts = saved.shortcuts;
     this.closeToTray = saved.closeToTray;
@@ -136,6 +141,7 @@ class Settings {
       categoryOf: $state.snapshot(this.categoryOf),
       categoryOrder: $state.snapshot(this.categoryOrder),
       foldedCategories: $state.snapshot(this.foldedCategories),
+      customCategories: $state.snapshot(this.customCategories),
       quickShortcut: $state.snapshot(this.quickShortcut),
       shortcuts: $state.snapshot(this.shortcuts),
       closeToTray: this.closeToTray,
@@ -224,6 +230,40 @@ class Settings {
     const { [key]: _retire, ...reste } = this.categoryOf;
     this.categoryOf = name ? { ...reste, [key]: name } : reste;
     if (persist) this.#save();
+  }
+
+  /** Crée un groupe vide (la colonne passe en mode groupes). Faux si le nom est vide ou trop long. */
+  createCategory(brut: string): boolean {
+    const nom = nomGroupe(brut);
+    if (!nom) return false;
+    this.sidebarCategories = true;
+    if (!this.customCategories.includes(nom)) this.customCategories = [...this.customCategories, nom];
+    if (!this.categoryOrder.includes(nom)) this.categoryOrder = [...this.categoryOrder, nom];
+    this.#save();
+    return true;
+  }
+
+  /** Renomme un groupe, avec ses pages, sa place et son état replié. */
+  renameCategory(ancien: string, brut: string, pages: readonly PageClassee[]): boolean {
+    const nom = nomGroupe(brut);
+    if (!nom || nom === ancien) return false;
+    this.categoryOf = renommerDansChoix(pages, this.categoryOf, ancien, nom);
+    const ordre = this.categoryOrder.includes(ancien) ? this.categoryOrder : [...this.categoryOrder, ancien];
+    this.categoryOrder = remplacerNom(ordre, ancien, nom);
+    this.foldedCategories = remplacerNom(this.foldedCategories, ancien, nom);
+    this.customCategories = remplacerNom(this.customCategories, ancien, nom);
+    if (!this.customCategories.includes(nom)) this.customCategories = [...this.customCategories, nom];
+    this.#save();
+    return true;
+  }
+
+  /** Supprime un groupe : ses pages retournent dans le groupe de leur plugin. */
+  deleteCategory(nom: string, pages: readonly PageClassee[]): void {
+    this.categoryOf = supprimerDansChoix(pages, this.categoryOf, nom);
+    this.categoryOrder = remplacerNom(this.categoryOrder, nom, null);
+    this.foldedCategories = remplacerNom(this.foldedCategories, nom, null);
+    this.customCategories = remplacerNom(this.customCategories, nom, null);
+    this.#save();
   }
 
   setCategoryOrder(names: string[]): void {

@@ -32,8 +32,27 @@
       pages.map((p) => ({ ...p, category: p.ref.page.category })),
       settings.categoryOf,
       settings.categoryOrder,
+      settings.customCategories,
     ),
   );
+  const pagesClassees = $derived(pages.map((p) => ({ key: p.key, category: p.ref.page.category ?? "" })));
+  // Groupes : création, renommage (un champ à la place du titre) et suppression.
+  let renomme = $state<string | null>(null);
+  let nomSaisi = $state("");
+  let nouveauGroupe = $state(false);
+  function validerRenommage(): void {
+    if (renomme) settings.renameCategory(renomme, nomSaisi, pagesClassees);
+    renomme = null;
+  }
+  function validerNouveau(): void {
+    if (nomSaisi.trim()) settings.createCategory(nomSaisi);
+    nouveauGroupe = false;
+    nomSaisi = "";
+  }
+  const focus = (el: HTMLInputElement) => {
+    el.focus();
+    el.select();
+  };
   /** Ordre d'affichage des pages : celui de la colonne, catégories comprises. */
   const ordreAffiche = $derived(settings.sidebarCategories ? groupes.flatMap((g) => g.items.map((p) => p.key)) : pages.map((p) => p.key));
   let nav: HTMLElement;
@@ -53,6 +72,13 @@
     if (!drag.moved && Math.abs(event.clientY - drag.startY) < 6) return;
     drag.moved = true;
     dragging = drag.id;
+    // Glissée sur le titre d'un groupe (même vide) : la page rejoint ce groupe.
+    const titre = (document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null)?.closest<HTMLElement>("[data-categorie]");
+    if (settings.sidebarCategories && titre?.dataset.categorie) {
+      const moi = pages.find((p) => p.key === drag!.id);
+      if (moi) settings.setCategoryOf(moi.key, titre.dataset.categorie === (moi.ref.page.category || "Autres") ? "" : titre.dataset.categorie, false);
+      return;
+    }
     const items = [...nav.querySelectorAll<HTMLElement>("[data-page]")];
     const target = items.findIndex((el) => {
       const rect = el.getBoundingClientRect();
@@ -229,12 +255,19 @@
     {#if settings.sidebarCategories}
       {#each groupes as g, gi (g.name)}
         {@const replie = settings.foldedCategories.includes(g.name)}
-        <div class="categorie">
-          <button class="cat-nom" onclick={() => settings.toggleCategoryFolded(g.name)} aria-expanded={!replie} title={replie ? "Déplier" : "Replier"}>
-            <span class="chevron" class:replie>▾</span>
-            <span class="label">{g.name}</span>
-          </button>
+        <div class="categorie" data-categorie={g.name}>
+          {#if renomme === g.name}
+            <input class="cat-saisie" bind:value={nomSaisi} maxlength="40" aria-label="Nouveau nom du groupe" use:focus
+              onkeydown={(e) => (e.key === "Enter" ? validerRenommage() : e.key === "Escape" && (renomme = null))} onblur={validerRenommage} />
+          {:else}
+            <button class="cat-nom" onclick={() => settings.toggleCategoryFolded(g.name)} ondblclick={() => ((renomme = g.name), (nomSaisi = g.name))} aria-expanded={!replie} title={replie ? "Déplier (double-clic : renommer)" : "Replier (double-clic : renommer)"}>
+              <span class="chevron" class:replie>▾</span>
+              <span class="label">{g.name}</span>
+            </button>
+          {/if}
           <span class="cat-outils label">
+            <button class="cat-fleche" aria-label={`Renommer ${g.name}`} title="Renommer le groupe" onclick={() => ((renomme = g.name), (nomSaisi = g.name))}>✎</button>
+            <button class="cat-fleche" aria-label={`Supprimer ${g.name}`} title="Supprimer le groupe (ses pages retournent à leur place d'origine)" onclick={() => settings.deleteCategory(g.name, pagesClassees)}>✕</button>
             <button class="cat-fleche" disabled={gi === 0} aria-label={`Monter ${g.name}`} title="Monter la catégorie" onclick={() => settings.setCategoryOrder(deplacerCategorie(groupes.map((x) => x.name), g.name, -1))}>↑</button>
             <button class="cat-fleche" disabled={gi === groupes.length - 1} aria-label={`Descendre ${g.name}`} title="Descendre la catégorie" onclick={() => settings.setCategoryOrder(deplacerCategorie(groupes.map((x) => x.name), g.name, 1))}>↓</button>
           </span>
@@ -242,7 +275,14 @@
         {#each g.items as { ref, key } (key)}
           {@render entree(ref, key, replie)}
         {/each}
+        {#if g.items.length === 0 && !replie}<p class="groupe-vide label">Glissez une page ici</p>{/if}
       {/each}
+      {#if nouveauGroupe}
+        <input class="cat-saisie" bind:value={nomSaisi} maxlength="40" placeholder="Nom du groupe" aria-label="Nom du nouveau groupe" use:focus
+          onkeydown={(e) => (e.key === "Enter" ? validerNouveau() : e.key === "Escape" && (nouveauGroupe = false))} onblur={validerNouveau} />
+      {:else}
+        <button class="nouveau-groupe label" onclick={() => ((nouveauGroupe = true), (nomSaisi = ""))} title="Créer un groupe dans la colonne">＋ Groupe</button>
+      {/if}
     {:else}
       {#each pages as { ref, key } (key)}
         {@render entree(ref, key, false)}
@@ -288,6 +328,38 @@
 </aside>
 
 <style>
+  .cat-saisie {
+    margin: 6px 10px 2px;
+    padding: 4px 8px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--field);
+    color: var(--text);
+    font: inherit;
+    font-size: 12px;
+    min-width: 0;
+  }
+  .groupe-vide {
+    margin: 2px 12px 6px 28px;
+    font-size: 11.5px;
+    color: var(--faint);
+  }
+  .nouveau-groupe {
+    margin: 8px 10px 4px;
+    padding: 4px 8px;
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    text-align: left;
+  }
+  .nouveau-groupe:hover {
+    color: var(--text);
+    border-color: var(--muted);
+  }
   .rapide {
     display: grid;
     gap: 4px;
