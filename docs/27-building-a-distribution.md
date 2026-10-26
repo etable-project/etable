@@ -76,7 +76,8 @@ defensively (`lib/distribution.ts`, tested): a missing or invalid field keeps Et
 | `ia` | `true` : *Settings → Artificial intelligence* appears (the user's own Gemini key, kept on the machine and never given to a plugin) and plugins with the `ia` permission can call `etabli.ai.extraire`. The host window does the call, so the distribution must allow `https://generativelanguage.googleapis.com` in `connect-src` of its Tauri CSP (plugin frames keep their own CSP and can never reach the network) |
 | `apercu` | `\"widgets\"`: the quick preview shows the home board (read-only; a click opens the page in the main window) instead of the favourite pages |
 | `accueilCouleur` | Colour of the *Home* tile (`#4d3d99`); with it, the tile is solid like the other pages, and a distribution icon named `home` (see `icons`) replaces the house |
-| `icons` | Icons of the distribution by name (`calendrier`…), same shapes as the logo but filled (`currentColor`). A plugin of the distribution can then give a page `icon: "calendrier"`; the validator accepts these names when `ETABLE_DISTRIBUTION` is set |
+| `icons` | Icons of the distribution by name (`calendrier`…), same shapes as the logo but filled (`currentColor`), or a single emoji (`"📋"`). A plugin of the distribution can then give a page `icon: "calendrier"`; the validator accepts these names when `ETABLE_DISTRIBUTION` is set |
+| `messageRapide` | Quick message field at the bottom of the sidebar: `{ "titre": "Écrire à Max", "outil": "quick_message", "page": "harnais/petitmot" }`. The text is sent as `{ text }` to that tool of the remote service (`distant`); when the sidebar is folded, a 💬 button opens `page` (`plugin/page`) instead |
 
 The application icon is separate: the distribution's `bundle.icon` in its Tauri configuration.
 ## Home-screen widgets on Android
