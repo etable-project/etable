@@ -3,6 +3,7 @@
   import { api } from "$lib/api";
   import { categorieDe, deplacerCategorie, grouper } from "$lib/categories";
   import { distribution } from "$lib/distribution";
+  import { appelerDistant } from "$lib/distant";
   import { allPages, pageKey, type PageRef } from "$lib/plugins/registry.svelte";
   import { shortcutHint } from "$lib/shortcuts";
   import { settings } from "$lib/state/settings.svelte";
@@ -90,6 +91,25 @@
   function go(target: View, event: MouseEvent): void {
     ui.menuOpen = false;
     tabs.navigate(target, { newTab: event.ctrlKey || event.button === 1 });
+  }
+
+  // Message rapide (distribution.messageRapide) : envoyé à un outil du service distant ; colonne repliée, le bouton ouvre la conversation.
+  const rapide = distribution.messageRapide;
+  let texteRapide = $state("");
+  let etatRapide = $state<"" | "envoi" | "ok" | string>("");
+  async function envoyerRapide(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    const text = texteRapide.trim();
+    if (!rapide || !text || etatRapide === "envoi") return;
+    etatRapide = "envoi";
+    const r = await appelerDistant(rapide.outil, { text });
+    etatRapide = r.ok ? "ok" : r.message;
+    if (r.ok) texteRapide = "";
+    setTimeout(() => (etatRapide = etatRapide === "ok" ? "" : etatRapide), 2500);
+  }
+  function ouvrirConversation(event: MouseEvent): void {
+    const [pluginId, pageId] = (rapide?.page ?? "").split("/");
+    if (pluginId && pageId) go({ kind: "page", pluginId, pageId }, event);
   }
 
   const preventAutoscroll = (e: MouseEvent) => e.button === 1 && e.preventDefault();
@@ -230,6 +250,17 @@
     {/if}
   </nav>
 
+  {#if rapide}
+    {#if settings.sidebarCollapsed && !ui.compact}
+      <button class="rapide-btn" onclick={ouvrirConversation} title={rapide.titre} aria-label={rapide.titre}>💬</button>
+    {:else}
+      <form class="rapide" onsubmit={envoyerRapide}>
+        <input bind:value={texteRapide} placeholder="💬 {rapide.titre}…" aria-label={rapide.titre} disabled={etatRapide === "envoi"} />
+        {#if etatRapide && etatRapide !== "envoi"}<small class:erreur={etatRapide !== "ok"}>{etatRapide === "ok" ? "Envoyé ✔" : etatRapide}</small>{/if}
+      </form>
+    {/if}
+  {/if}
+
   <!-- Dépliée : les deux boutons côte à côte. Repliée : « Replier » glisse au-dessus de
        « Paramètres », en même temps que la colonne se réduit (aucun saut). -->
   <div class="strip">
@@ -257,6 +288,39 @@
 </aside>
 
 <style>
+  .rapide {
+    display: grid;
+    gap: 4px;
+    padding: 8px 10px 0;
+  }
+  .rapide input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--field);
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+  }
+  .rapide small {
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .rapide small.erreur {
+    color: var(--danger, #d9534f);
+  }
+  .rapide-btn {
+    margin: 8px auto 0;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 16px;
+  }
   .side {
     position: relative;
     flex: none;

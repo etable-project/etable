@@ -34,9 +34,12 @@ export interface Distribution {
   /** Adresse (https) du fichier latest.json de la distribution : l'application Android y cherche une nouvelle version et ouvre le téléchargement de l'APK (ndroid.url). 
 ull : pas de mise à jour sur Android. */
   androidUpdateUrl: string | null;
+  /** Message rapide dans la colonne : un champ qui envoie le texte à un outil du service distant (`{ text }`). Colonne repliée :
+   * un bouton qui ouvre la page de la conversation (« plugin/page »). Demande `distant`. */
+  messageRapide: { titre: string; outil: string; page: string | null } | null;
 }
 
-export const DISTRIBUTION_DEFAUT: Distribution = { name: "Établi", pluginsPage: true, themes: null, logo: null, logoPlein: false, logoViewBox: "0 0 24 24", accueilCouleur: null, apercu: "favoris", ia: false, trajets: false, distant: null, tabs: true, icons: {}, tuilesNues: false, androidUpdateUrl: null };
+export const DISTRIBUTION_DEFAUT: Distribution = { name: "Établi", pluginsPage: true, themes: null, logo: null, logoPlein: false, logoViewBox: "0 0 24 24", accueilCouleur: null, apercu: "favoris", ia: false, trajets: false, distant: null, tabs: true, icons: {}, tuilesNues: false, androidUpdateUrl: null, messageRapide: null };
 
 const objet = (v: unknown): Record<string, unknown> | null => (typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 const COULEUR = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\))$/i;
@@ -57,13 +60,17 @@ function lireTheme(brut: unknown): Theme | null {
   return { id: t.id, name: t.name.trim().slice(0, 40), author: typeof t.author === "string" ? t.author.slice(0, 60) : "", base: t.base, colors };
 }
 
-/** Au plus 40 icônes, au nom en minuscules, dont le dessin passe le même contrôle que le logo. */
+/** Un émoji seul (avec ses variantes et liaisons), à la place d'un dessin. */
+const EMOJI = /^(?:\p{Extended_Pictographic}|\p{Regional_Indicator})(?:[\u200d\ufe0f\u20e3]|\p{Emoji_Modifier}|\p{Extended_Pictographic}|\p{Regional_Indicator})*$/u;
+export const estEmoji = (v: string): boolean => v.length <= 16 && EMOJI.test(v);
+
+/** Au plus 40 icônes, au nom en minuscules, dont le dessin passe le même contrôle que le logo (ou un émoji seul). */
 function lireIcones(brut: unknown): Record<string, string> {
   const o = objet(brut);
   const sortie: Record<string, string> = {};
   if (!o) return sortie;
   for (const [nom, dessin] of Object.entries(o).slice(0, 40)) {
-    if (/^[a-z][a-z0-9-]{0,30}$/.test(nom) && typeof dessin === "string" && dessin.length <= 2000 && LOGO.test(dessin)) sortie[nom] = dessin.trim();
+    if (/^[a-z][a-z0-9-]{0,30}$/.test(nom) && typeof dessin === "string" && ((dessin.length <= 2000 && LOGO.test(dessin)) || estEmoji(dessin.trim()))) sortie[nom] = dessin.trim();
   }
   return sortie;
 }
@@ -72,6 +79,13 @@ function lireDistant(brut: unknown): Distribution["distant"] {
   const o = objet(brut);
   if (!o || typeof o.url !== "string" || !/^https:\/\/[^\s]{1,300}$/.test(o.url.trim())) return null;
   return { nom: typeof o.nom === "string" && o.nom.trim() ? o.nom.trim().slice(0, 40) : "Service distant", url: o.url.trim() };
+}
+
+function lireMessageRapide(brut: unknown): Distribution["messageRapide"] {
+  const o = objet(brut);
+  if (!o || typeof o.outil !== "string" || !/^[a-z][a-z0-9_]{0,40}$/.test(o.outil)) return null;
+  const page = typeof o.page === "string" && /^[a-z0-9-]{1,40}\/[a-z0-9-]{1,40}$/.test(o.page) ? o.page : null;
+  return { titre: typeof o.titre === "string" && o.titre.trim() ? o.titre.trim().slice(0, 40) : "Message", outil: o.outil, page };
 }
 
 export function lireDistribution(brut: unknown): Distribution {
@@ -95,6 +109,7 @@ export function lireDistribution(brut: unknown): Distribution {
     tabs: o.tabs !== false,
     icons: lireIcones(o.icons),
     tuilesNues: o.tuilesNues === true,
+    messageRapide: lireMessageRapide(o.messageRapide),
     androidUpdateUrl: typeof o.androidUpdateUrl === "string" && /^https:\/\/[^\s]{1,300}$/.test(o.androidUpdateUrl.trim()) ? o.androidUpdateUrl.trim() : null,
   };
 }

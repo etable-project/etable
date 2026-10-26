@@ -34,6 +34,15 @@ describe("lireDistribution", () => {
     const d = lireDistribution({ icons: { calendrier: '<rect x="3" y="5" width="18" height="16" rx="4"/>', "Mauvais Nom": '<path d="M0 0"/>', piege: '<script>x()</script>' } });
     expect(Object.keys(d.icons)).toEqual(["calendrier"]);
     expect(lireDistribution({ icons: "x" }).icons).toEqual({});
+    // un émoji seul est accepté, du texte non
+    expect(lireDistribution({ icons: { taches: "📋", cerveau: "🧠", mot: "bonjour", drapeau: "🇫🇷" } }).icons).toEqual({ taches: "📋", cerveau: "🧠", drapeau: "🇫🇷" });
+  });
+
+  it("lit le message rapide de la colonne", () => {
+    expect(lireDistribution({ messageRapide: { titre: "Écrire à Max", outil: "quick_message", page: "harnais/petitmot" } }).messageRapide).toEqual({ titre: "Écrire à Max", outil: "quick_message", page: "harnais/petitmot" });
+    expect(lireDistribution({ messageRapide: { outil: "Pas Bon" } }).messageRapide).toBeNull();
+    expect(lireDistribution({ messageRapide: { outil: "x", page: "../y" } }).messageRapide).toEqual({ titre: "Message", outil: "x", page: null });
+    expect(lireDistribution({}).messageRapide).toBeNull();
   });
 
   it("lit les onglets et le logo en couleurs, avec des valeurs d'Établi par défaut", () => {
