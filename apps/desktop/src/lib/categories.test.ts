@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { categorieDe, deplacerCategorie, grouper, lireChoix, lireNoms, SANS_CATEGORIE } from "./categories";
+import { nomGroupe, remplacerNom, renommerDansChoix, supprimerDansChoix, categorieDe, deplacerCategorie, grouper, lireChoix, lireNoms, SANS_CATEGORIE } from "./categories";
 
 const p = (key: string, category = "") => ({ key, category });
 const pages = [p("a/x", "Argent"), p("b/y", "Temps"), p("c/z", "Argent"), p("d/w")];
@@ -20,6 +20,33 @@ describe("grouper", () => {
     expect(categorieDe(p("a/x", "Argent"), { "a/x": "Perso" })).toBe("Perso");
     const g = grouper(pages, { "a/x": "Temps" }, []);
     expect(g.find((x) => x.name === "Temps")?.items.map((i) => i.key)).toEqual(["a/x", "b/y"]);
+  });
+});
+
+describe("groupes créés par l'utilisateur", () => {
+  const pages = [
+    { key: "a/1", category: "Argent" },
+    { key: "a/2", category: "Argent" },
+    { key: "b/1", category: "" },
+  ];
+  it("montre un groupe vide créé par l'utilisateur", () => {
+    const g = grouper(pages, {}, [], ["Retux"]);
+    expect(g.map((x) => [x.name, x.items.length])).toEqual([["Argent", 2], ["Autres", 1], ["Retux", 0]]);
+  });
+  it("renomme un groupe avec toutes ses pages", () => {
+    const choix = renommerDansChoix(pages, { "b/1": "Argent" }, "Argent", "Mon argent");
+    expect(grouper(pages, choix, []).map((x) => [x.name, x.items.length])).toEqual([["Mon argent", 3]]);
+  });
+  it("supprime un groupe : les pages reviennent à leur plugin, ou à Autres", () => {
+    const choix = supprimerDansChoix(pages, { "b/1": "Argent" }, "Argent");
+    expect(grouper(pages, choix, []).map((x) => [x.name, x.items.length])).toEqual([["Autres", 3]]);
+    expect(supprimerDansChoix(pages, { "a/1": "Retux" }, "Retux")).toEqual({});
+  });
+  it("valide un nom et remplace dans une liste sans doublon", () => {
+    expect(nomGroupe("  Mon   groupe ")).toBe("Mon groupe");
+    expect(nomGroupe("   ")).toBeNull();
+    expect(remplacerNom(["A", "B", "C"], "B", "C")).toEqual(["A", "C"]);
+    expect(remplacerNom(["A", "B"], "B", null)).toEqual(["A"]);
   });
 });
 
