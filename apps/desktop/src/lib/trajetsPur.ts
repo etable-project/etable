@@ -7,9 +7,29 @@ export interface ConfigTrajets {
   depart: string;
   /** Éviter les autoroutes et routes à péage. */
   sansPeage: boolean;
+  /** Mes domiciles (chez maman, chez mamie…), réglés ici une fois pour toutes. */
+  domiciles: Domicile[];
+  /** D'où partent les trajets : le nom d'un domicile, ou « gps » (la position du téléphone ou du PC au moment du calcul). */
+  actuel: string;
+  /** Pays où chercher les adresses (code ISO, « FR ») : évite qu'une adresse courte soit trouvée à l'autre bout du monde. */
+  pays: string;
 }
 
-export const CONFIG_TRAJETS_DEFAUT: ConfigTrajets = { cle: "", depart: "", sansPeage: false };
+export interface Domicile {
+  nom: string;
+  adresse: string;
+}
+
+export const GPS = "gps";
+export const CONFIG_TRAJETS_DEFAUT: ConfigTrajets = { cle: "", depart: "", sansPeage: false, domiciles: [], actuel: "", pays: "FR" };
+
+/** Le point de départ des trajets : l'adresse du domicile choisi, « gps », ou l'ancienne adresse de départ. */
+export function departCourant(c: ConfigTrajets): string {
+  if (c.actuel === GPS) return GPS;
+  return c.domiciles.find((d) => d.nom === c.actuel)?.adresse ?? c.domiciles[0]?.adresse ?? c.depart;
+}
+
+const texteCourt = (v: unknown, max: number): string => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max) : "");
 export const TOMTOM = "https://api.tomtom.com";
 
 export type ResultatTrajet =
@@ -25,12 +45,31 @@ const objet = (v: unknown): Record<string, unknown> | null => (typeof v === "obj
 export function lireConfigTrajets(brut: unknown): ConfigTrajets {
   const o = objet(brut);
   const cle = typeof o?.cle === "string" ? o.cle.replace(/[\s\u200b-\u200d\u2060\ufeff"'`«»]/g, "") : "";
-  const depart = typeof o?.depart === "string" ? o.depart.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, 200) : "";
-  return { cle: /^[A-Za-z0-9._-]{10,200}$/.test(cle) ? cle : "", depart, sansPeage: o?.sansPeage === true };
+  const depart = texteCourt(o?.depart, 200);
+  let domiciles = (Array.isArray(o?.domiciles) ? o.domiciles : [])
+    .map((d) => objet(d))
+    .map((d) => ({ nom: texteCourt(d?.nom, 40), adresse: texteCourt(d?.adresse, 200) }))
+    .filter((d) => d.nom && d.adresse)
+    .slice(0, 10);
+  // Ancienne configuration : l'adresse de départ devient le premier domicile.
+  if (domiciles.length === 0 && depart) domiciles = [{ nom: "Domicile", adresse: depart }];
+  const actuel = typeof o?.actuel === "string" && (o.actuel === GPS || domiciles.some((d) => d.nom === o.actuel)) ? o.actuel : (domiciles[0]?.nom ?? "");
+  const pays = typeof o?.pays === "string" && /^[A-Z]{2}$/.test(o.pays) ? o.pays : "FR";
+  return { cle: /^[A-Za-z0-9._-]{10,200}$/.test(cle) ? cle : "", depart, sansPeage: o?.sansPeage === true, domiciles, actuel, pays };
 }
 
-export const urlGeocodage = (cle: string, adresse: string): string =>
-  `${TOMTOM}/search/2/geocode/${encodeURIComponent(adresse)}.json?key=${encodeURIComponent(cle)}&limit=1&language=fr-FR`;
+/** Géocodage dans le pays choisi, en préférant les résultats proches du point de départ s'il est connu. */
+export const urlGeocodage = (cle: string, adresse: string, pays = "FR", pres?: { lat: number; lon: number }): string =>
+  `${TOMTOM}/search/2/geocode/${encodeURIComponent(adresse)}.json?key=${encodeURIComponent(cle)}&limit=1&language=fr-FR&countrySet=${pays}${pres ? `&lat=${pres.lat}&lon=${pres.lon}` : ""}`;
+
+/** « 43.49,-1.47 » : une position déjà connue, sans géocodage. */
+export function lireCoordonnees(texte: string): { lat: number; lon: number } | null {
+  const m = /^\s*(-?\d{1,2}(?:\.\d+)?)\s*,\s*(-?\d{1,3}(?:\.\d+)?)\s*$/.exec(texte);
+  if (!m) return null;
+  const lat = Number(m[1]);
+  const lon = Number(m[2]);
+  return Math.abs(lat) <= 90 && Math.abs(lon) <= 180 ? { lat, lon } : null;
+}
 
 export function lirePosition(json: unknown): { lat: number; lon: number } | null {
   const premier = Array.isArray(objet(json)?.results) ? objet((objet(json)!.results as unknown[])[0]) : null;

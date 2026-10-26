@@ -97,12 +97,15 @@
     font-size: 18px;
     letter-spacing: -0.02em;
   }
+  /* Le défilement rognerait le contour des champs actifs : un peu de marge intérieure, rattrapée à l'extérieur. */
   .corps {
     display: flex;
     flex-direction: column;
     gap: 10px;
     min-height: 0;
     overflow-y: auto;
+    padding: 4px;
+    margin: -4px;
   }
   footer {
     display: flex;
