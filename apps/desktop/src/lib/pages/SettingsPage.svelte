@@ -59,9 +59,9 @@
       lead: "Votre clé Gemini, pour lire les tickets et proposer des repas. Elle reste sur cet appareil.",
     },
     trajets: {
-      label: "Trajets",
-      title: "Trajets",
-      lead: "Votre clé TomTom et votre adresse de départ, pour les temps de trajet avec la circulation.",
+      label: "Trajets et domiciles",
+      title: "Trajets et domiciles",
+      lead: "Vos domiciles, votre position GPS et votre clé TomTom : tous les trajets de l'agenda partent d'ici, avec la circulation.",
     },
     distant: {
       label: distribution.distant?.nom ?? "Service distant",
@@ -111,6 +111,7 @@
       sections: [
         "general",
         "apparence",
+        ...(distribution.trajets ? (["trajets"] as const) : []),
         "plugins",
         ...(distribution.ia ? (["ia"] as const) : []),
         ...(api.capacites.fenetresNatives ? (["raccourcis"] as const) : []),
@@ -120,7 +121,7 @@
         "a-propos",
       ],
     },
-    { title: "Plugins", sections: [...(distribution.trajets ? (["trajets"] as const) : []), ...(distribution.distant ? (["distant"] as const) : [])] },
+    { title: "Plugins", sections: [...(distribution.distant ? (["distant"] as const) : [])] },
   ];
 
   /**

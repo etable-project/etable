@@ -1,7 +1,7 @@
 <script lang="ts">
   // Colonne des pages (docs/28) : ce que les plugins déclarent dans `pages`, dans l'ordre choisi par l'utilisateur.
   import { api } from "$lib/api";
-  import { categorieDe, deplacerCategorie, grouper } from "$lib/categories";
+  import { categorieDe, grouper } from "$lib/categories";
   import { distribution } from "$lib/distribution";
   import { appelerDistant } from "$lib/distant";
   import { allPages, pageKey, type PageRef } from "$lib/plugins/registry.svelte";
@@ -10,6 +10,7 @@
   import { tabs } from "$lib/state/tabs.svelte";
   import { ui } from "$lib/state/ui.svelte";
   import type { View } from "$lib/types";
+  import ColonneEditeur from "./ColonneEditeur.svelte";
   import Icon from "./Icon.svelte";
   import Logo from "./Logo.svelte";
   import Tile from "./Tile.svelte";
@@ -36,29 +37,18 @@
     ),
   );
   const pagesClassees = $derived(pages.map((p) => ({ key: p.key, category: p.ref.page.category ?? "" })));
-  // Groupes : création, renommage (un champ à la place du titre) et suppression.
-  let renomme = $state<string | null>(null);
-  let nomSaisi = $state("");
-  let nouveauGroupe = $state(false);
-  /** Mode « modifier les groupes » (le stylo) : outils des groupes et création, cachés le reste du temps. */
-  let edition = $state(false);
-  function validerRenommage(): void {
-    if (renomme) settings.renameCategory(renomme, nomSaisi, pagesClassees);
-    renomme = null;
+  // Clic droit sur la colonne : un petit menu, dont « Modifier la colonne » qui ouvre l'éditeur des groupes.
+  let menu = $state<{ x: number; y: number } | null>(null);
+  let editeur = $state<{ nouveau: boolean } | null>(null);
+  function ouvrirMenu(event: MouseEvent): void {
+    if (ui.compact) return;
+    event.preventDefault();
+    menu = { x: Math.min(event.clientX, window.innerWidth - 220), y: Math.min(event.clientY, window.innerHeight - 140) };
   }
-  function validerNouveau(): void {
-    // le nouveau groupe se range à la fin de ceux qu'on voit déjà
-    if (nomSaisi.trim()) {
-      if (settings.sidebarCategories) settings.setCategoryOrder(groupes.map((g) => g.name));
-      settings.createCategory(nomSaisi);
-    }
-    nouveauGroupe = false;
-    nomSaisi = "";
+  function choisir(action: () => void): void {
+    menu = null;
+    action();
   }
-  const focus = (el: HTMLInputElement) => {
-    el.focus();
-    el.select();
-  };
   /** Ordre d'affichage des pages : celui de la colonne, catégories comprises. */
   const ordreAffiche = $derived(settings.sidebarCategories ? groupes.flatMap((g) => g.items.map((p) => p.key)) : pages.map((p) => p.key));
   let nav: HTMLElement;
@@ -202,7 +192,7 @@
     <div class="drag" data-tauri-drag-region></div>
   </div>
 
-  <nav class="nav" aria-label="Pages" bind:this={nav}>
+  <nav class="nav" aria-label="Pages" bind:this={nav} oncontextmenu={ouvrirMenu}>
     <button
       class="item"
       class:active={view?.kind === "home"}
@@ -258,24 +248,13 @@
     {/snippet}
 
     {#if settings.sidebarCategories}
-      {#each groupes as g, gi (g.name)}
+      {#each groupes as g (g.name)}
         {@const replie = settings.foldedCategories.includes(g.name)}
         <div class="categorie" data-categorie={g.name}>
-          {#if renomme === g.name}
-            <input class="cat-saisie" bind:value={nomSaisi} maxlength="40" aria-label="Nouveau nom du groupe" use:focus
-              onkeydown={(e) => (e.key === "Enter" ? validerRenommage() : e.key === "Escape" && (renomme = null))} onblur={validerRenommage} />
-          {:else}
-            <button class="cat-nom" onclick={() => settings.toggleCategoryFolded(g.name)} aria-expanded={!replie} title={replie ? "Déplier" : "Replier"}>
-              <span class="chevron" class:replie>▾</span>
-              <span class="label">{g.name}</span>
-            </button>
-          {/if}
-          {#if edition}<span class="cat-outils label">
-            <button class="cat-fleche" aria-label={`Renommer ${g.name}`} title="Renommer le groupe" onclick={() => ((renomme = g.name), (nomSaisi = g.name))}>✎</button>
-            <button class="cat-fleche" aria-label={`Supprimer ${g.name}`} title="Supprimer le groupe (ses pages retournent à leur place d'origine)" onclick={() => settings.deleteCategory(g.name, pagesClassees)}>✕</button>
-            <button class="cat-fleche" disabled={gi === 0} aria-label={`Monter ${g.name}`} title="Monter la catégorie" onclick={() => settings.setCategoryOrder(deplacerCategorie(groupes.map((x) => x.name), g.name, -1))}>↑</button>
-            <button class="cat-fleche" disabled={gi === groupes.length - 1} aria-label={`Descendre ${g.name}`} title="Descendre la catégorie" onclick={() => settings.setCategoryOrder(deplacerCategorie(groupes.map((x) => x.name), g.name, 1))}>↓</button>
-          </span>{/if}
+          <button class="cat-nom" onclick={() => settings.toggleCategoryFolded(g.name)} aria-expanded={!replie} title={replie ? "Déplier" : "Replier"}>
+            <span class="chevron" class:replie aria-hidden="true">▾</span>
+            <span class="label">{g.name}</span>
+          </button>
         </div>
         {#each g.items as { ref, key } (key)}
           {@render entree(ref, key, replie)}
@@ -287,19 +266,17 @@
         {@render entree(ref, key, false)}
       {/each}
     {/if}
-    {#if edition}
-      {#if nouveauGroupe}
-        <input class="cat-saisie" bind:value={nomSaisi} maxlength="40" placeholder="Nom du groupe" aria-label="Nom du nouveau groupe" use:focus
-          onkeydown={(e) => (e.key === "Enter" ? validerNouveau() : e.key === "Escape" && (nouveauGroupe = false))} onblur={validerNouveau} />
-      {:else}
-        <button class="nouveau-groupe label" onclick={() => ((nouveauGroupe = true), (nomSaisi = ""))} title="Créer un groupe dans la colonne">＋ Groupe</button>
-      {/if}
-    {/if}
-    <button class="stylo label" class:on={edition} onclick={() => ((edition = !edition), (nouveauGroupe = false), (renomme = null))}
-      title={edition ? "Terminer" : "Modifier les groupes (créer, renommer, supprimer, ranger)"} aria-label={edition ? "Terminer la modification des groupes" : "Modifier les groupes"} aria-pressed={edition}>
-      {edition ? "✓ Terminé" : "✎"}
-    </button>
   </nav>
+
+  {#if menu}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+    <div class="menu-fond" onclick={() => (menu = null)} oncontextmenu={(e) => (e.preventDefault(), (menu = null))}></div>
+    <div class="menu" role="menu" style:left="{menu.x}px" style:top="{menu.y}px">
+      <button role="menuitem" onclick={() => choisir(() => (editeur = { nouveau: false }))}>✎ Modifier la colonne…</button>
+      <button role="menuitem" onclick={() => choisir(() => (editeur = { nouveau: true }))}>＋ Nouveau groupe…</button>
+      <button role="menuitem" onclick={() => choisir(() => settings.toggleSidebar())}>{settings.sidebarCollapsed ? "Déplier la colonne" : "Replier la colonne"}</button>
+    </div>
+  {/if}
 
   {#if rapide}
     {#if settings.sidebarCollapsed && !ui.compact}
@@ -338,38 +315,15 @@
   <div class="resizer" onpointerdown={startResize}></div>
 </aside>
 
+{#if editeur}
+  <ColonneEditeur {groupes} {pagesClassees} nouveau={editeur.nouveau} onclose={() => (editeur = null)} />
+{/if}
+
 <style>
-  .cat-saisie {
-    margin: 6px 10px 2px;
-    padding: 4px 8px;
-    border: 1px solid var(--accent);
-    border-radius: 6px;
-    background: var(--field);
-    color: var(--text);
-    font: inherit;
-    font-size: 12px;
-    min-width: 0;
-  }
   .groupe-vide {
     margin: 2px 12px 6px 28px;
     font-size: 11.5px;
     color: var(--faint);
-  }
-  .nouveau-groupe {
-    margin: 8px 10px 4px;
-    padding: 4px 8px;
-    border: 1px dashed var(--border);
-    border-radius: 6px;
-    background: none;
-    color: var(--muted);
-    font: inherit;
-    font-size: 12px;
-    cursor: pointer;
-    text-align: left;
-  }
-  .nouveau-groupe:hover {
-    color: var(--text);
-    border-color: var(--muted);
   }
   .rapide {
     display: grid;
@@ -560,19 +514,57 @@
     white-space: nowrap;
   }
   .chevron {
-    display: inline-block;
-    transition: transform 0.12s;
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--accent) 14%, transparent);
+    color: var(--accent);
+    font-size: 12px;
+    line-height: 1;
+    transition: transform 0.12s, background 0.12s, color 0.12s;
+  }
+  .cat-nom:hover .chevron,
+  .cat-nom:focus-visible .chevron {
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+    border-color: var(--accent);
   }
   .chevron.replie {
     transform: rotate(-90deg);
   }
-  .cat-outils {
-    display: none;
-    gap: 2px;
+  .menu-fond {
+    position: fixed;
+    inset: 0;
+    z-index: 39;
   }
-  .categorie:hover .cat-outils,
-  .categorie:focus-within .cat-outils {
+  .menu {
+    position: fixed;
+    z-index: 40;
+    min-width: 200px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    background: var(--surface);
+    box-shadow: var(--shadow);
     display: flex;
+    flex-direction: column;
+  }
+  .menu button {
+    text-align: left;
+    padding: 7px 10px;
+    border: 0;
+    border-radius: 6px;
+    background: none;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .menu button:hover,
+  .menu button:focus-visible {
+    background: var(--field);
   }
   .collapsed .categorie {
     height: 0;
@@ -587,10 +579,7 @@
     margin: 0;
   }
   .collapsed .categorie > *,
-  .collapsed .groupe-vide,
-  .collapsed .stylo,
-  .collapsed .nouveau-groupe,
-  .collapsed .cat-saisie {
+  .collapsed .groupe-vide {
     display: none;
   }
   .collapsed .nav {
@@ -598,40 +587,6 @@
   }
   .collapsed .nav::-webkit-scrollbar {
     display: none;
-  }
-  .stylo {
-    align-self: flex-start;
-    margin: 6px 6px 2px;
-    padding: 3px 9px;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    background: none;
-    color: var(--faint);
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  .stylo:hover {
-    color: var(--text);
-    border-color: var(--border);
-  }
-  .stylo.on {
-    color: var(--accent);
-    border-color: var(--accent);
-  }
-  .cat-fleche {
-    border: 0;
-    background: none;
-    color: var(--muted);
-    width: 22px;
-    height: 22px;
-    border-radius: var(--r-xs);
-  }
-  .cat-fleche:hover:not(:disabled) {
-    background: var(--field);
-  }
-  .cat-fleche:disabled {
-    opacity: 0.3;
   }
   .item.dragging {
     background: var(--surface);

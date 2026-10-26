@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { departCourant, erreurHttp, GPS, lireConfigTrajets, lireCoordonnees, lirePosition, lireTrajet, urlGeocodage, urlTrajet, urlWaze } from "./trajetsPur";
+import { departCourant, erreurHttp, GPS, lireAdresseTrouvee, lireConfigTrajets, lireCoordonnees, lirePosition, lireTrajet, nettoyerAdresse, RAYON_PROCHE_M, urlGeocodage, urlRecherche, urlTrajet, urlWaze } from "./trajetsPur";
 
 describe("trajets", () => {
   it("lit une configuration en refusant une clé douteuse", () => {
@@ -42,6 +42,19 @@ describe("trajets", () => {
       expect(urlGeocodage("k", "Armar Anglet", "FR", { lat: 43.4, lon: -1.5 })).toContain("countrySet=FR&lat=43.4&lon=-1.5");
       expect(lireCoordonnees("43.49,-1.47")).toEqual({ lat: 43.49, lon: -1.47 });
       expect(lireCoordonnees("Bayonne")).toBeNull();
+    });
+  });
+
+  describe("recherche libre", () => {
+    it("nettoie les parenthèses et cherche près du départ", () => {
+      expect(nettoyerAdresse("Armar (Anglet)")).toBe("Armar Anglet");
+      const u = urlRecherche("k", "Armar (Anglet)", "FR", { lat: 43.48, lon: -0.77 }, RAYON_PROCHE_M);
+      expect(u).toContain("/search/2/search/Armar%20Anglet.json");
+      expect(u).toContain("countrySet=FR&lat=43.48&lon=-0.77&radius=150000");
+    });
+    it("lit l'adresse trouvée", () => {
+      expect(lireAdresseTrouvee({ results: [{ poi: { name: "Armar" }, address: { freeformAddress: "64600 Anglet" } }] })).toBe("Armar, 64600 Anglet");
+      expect(lireAdresseTrouvee({ results: [] })).toBe("");
     });
   });
 });
