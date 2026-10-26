@@ -2,7 +2,7 @@
   // Paramètres → Trajets : la clé TomTom, mes domiciles (chez maman, chez mamie…) et d'où partent les trajets : un domicile ou la
   // position GPS de l'appareil au moment du calcul. Tout reste sur cet appareil ; les plugins qui ont la permission « trajets »
   // demandent un temps de trajet sans jamais voir la clé ni les adresses.
-  import { calculerTrajet, configTrajets, enregistrerConfigTrajets, GPS, positionActuelle, type Domicile } from "$lib/trajets";
+  import { calculerTrajetDetaille, configTrajets, enregistrerConfigTrajets, GPS, positionActuelle, type Domicile } from "$lib/trajets";
 
   const depart0 = configTrajets();
   let cle = $state("");
@@ -33,10 +33,12 @@
   async function essayer(): Promise<void> {
     occupe = true;
     message = "";
-    const r = await calculerTrajet({ vers: essaiVers.trim() }, config());
+    const r = await calculerTrajetDetaille({ vers: essaiVers.trim() }, config());
     occupe = false;
     reussi = r.ok;
-    message = r.ok ? `Trajet trouvé : ${r.minutes} min avec la circulation actuelle, ${r.distanceKm.toLocaleString("fr-FR")} km.` : r.message;
+    message = r.ok
+      ? `${r.minutes} min avec la circulation actuelle, ${r.distanceKm.toLocaleString("fr-FR")} km. Départ trouvé : ${r.depart || "?"}. Arrivée trouvée : ${r.arrivee || "?"}.`
+      : r.message;
   }
 
   async function testerGps(): Promise<void> {
@@ -47,31 +49,19 @@
 </script>
 
 <div class="box">
-  <h3>Clé TomTom</h3>
-  <p class="hint">Créez un compte gratuit sur <b>developer.tomtom.com</b>, copiez votre clé d'API (« API Key »), collez-la ici. Elle reste sur cet appareil.</p>
-  <div class="champs">
-    <label>
-      Clé d'API
-      <input class="text-input" type="password" bind:value={cle} placeholder={enregistree ? "Clé enregistrée (laissez vide pour la garder)" : "Collez votre clé"} autocomplete="off" spellcheck="false" />
-    </label>
-    <label class="case"><input type="checkbox" bind:checked={sansPeage} /> Éviter les péages</label>
-  </div>
-</div>
-
-<div class="box">
   <h3>Mes domiciles</h3>
-  <p class="hint">Les endroits où tu dors (chez maman, chez mamie…). Choisis d'où partent tes trajets : un domicile, ou ta position GPS au moment du calcul.</p>
+  <p class="hint">Les endroits où vous dormez (chez maman, chez mamie…). Cochez celui d'où vous partez en ce moment (pris en compte tout de suite), ou votre position GPS au moment du calcul. Tous les trajets de l'agenda partent de là.</p>
   <div class="champs">
     {#each domiciles as d, i (i)}
       <div class="domicile">
-        <label class="radio"><input type="radio" name="actuel" checked={actuel === d.nom} onchange={() => (actuel = d.nom)} aria-label="Partir de {d.nom || 'ce domicile'}" /></label>
+        <label class="radio"><input type="radio" name="actuel" checked={actuel === d.nom} onchange={() => ((actuel = d.nom), enregistrer())} aria-label="Partir de {d.nom || 'ce domicile'}" /></label>
         <input class="text-input nom" bind:value={d.nom} placeholder="Chez maman" aria-label="Nom du domicile" maxlength="40" />
         <input class="text-input" bind:value={d.adresse} placeholder="103 Route des crêtes, 64300 Castetner" aria-label="Adresse" autocomplete="street-address" />
         <button class="btn" onclick={() => (domiciles = domiciles.filter((_, j) => j !== i))} aria-label="Retirer {d.nom}">✕</button>
       </div>
     {/each}
     <div class="domicile">
-      <label class="radio"><input type="radio" name="actuel" checked={actuel === GPS} onchange={() => (actuel = GPS)} aria-label="Partir de ma position GPS" /></label>
+      <label class="radio"><input type="radio" name="actuel" checked={actuel === GPS} onchange={() => ((actuel = GPS), enregistrer())} aria-label="Partir de ma position GPS" /></label>
       <span class="gps">📍 Ma position (GPS) au moment du calcul</span>
       <button class="btn" onclick={testerGps}>Tester</button>
     </div>
@@ -84,7 +74,21 @@
 </div>
 
 <div class="box">
+  <h3>Clé TomTom</h3>
+  <p class="hint">Créez un compte gratuit sur <b>developer.tomtom.com</b>, copiez votre clé d'API (« API Key »), collez-la ici. Elle reste sur cet appareil.</p>
+  <div class="champs">
+    <label>
+      Clé d'API
+      <input class="text-input" type="password" bind:value={cle} placeholder={enregistree ? "Clé enregistrée (laissez vide pour la garder)" : "Collez votre clé"} autocomplete="off" spellcheck="false" />
+    </label>
+    <label class="case"><input type="checkbox" bind:checked={sansPeage} /> Éviter les péages</label>
+    <div class="buttons"><button class="btn primary" onclick={enregistrer}>Enregistrer</button></div>
+  </div>
+</div>
+
+<div class="box">
   <h3>Essayer</h3>
+  <p class="hint">Vérifiez que les adresses sont bien trouvées : les deux adresses retenues par TomTom s'affichent.</p>
   <div class="champs">
     <label>
       Vers une adresse

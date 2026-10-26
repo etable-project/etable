@@ -18,6 +18,18 @@
     }, []),
   );
 
+  // Tout s'enregistre dès qu'un champ change : une coche le confirme à côté du champ, une seconde et demie.
+  let enregistre = $state<string | null>(null);
+  let minuteur: ReturnType<typeof setTimeout> | undefined;
+  function definir(id: string, v: string | number | boolean): void {
+    parametres.definir(plugin, id, v);
+    enregistre = id;
+    clearTimeout(minuteur);
+    minuteur = setTimeout(() => (enregistre = null), 1500);
+  }
+  /** « Rétablir » efface tous les réglages du plugin : un deuxième clic le confirme. */
+  let confirmer = $state(false);
+
   /** Saisie numérique : la virgule française est acceptée ; une saisie qui ne convient pas revient à la valeur réglée. */
   function nombre(event: Event, p: Extract<ParameterManifest, { type: "number" }>): void {
     const champ = event.currentTarget as HTMLInputElement;
@@ -26,7 +38,7 @@
       champ.value = String(valeurs[p.id]);
       return;
     }
-    parametres.definir(plugin, p.id, v);
+    definir(p.id, v);
   }
 </script>
 
@@ -52,22 +64,29 @@
               {#if p.unit}<span class="unit">{p.unit}</span>{/if}
             </span>
           {:else if p.type === "text"}
-            <input id={`p-${p.id}`} class="texte" value={String(valeurs[p.id])} onchange={(e) => parametres.definir(plugin, p.id, e.currentTarget.value)} />
+            <input id={`p-${p.id}`} class="texte" value={String(valeurs[p.id])} onchange={(e) => definir(p.id, e.currentTarget.value)} />
           {:else if p.type === "time"}
-            <input id={`p-${p.id}`} class="heure" type="time" value={String(valeurs[p.id])} onchange={(e) => e.currentTarget.value && parametres.definir(plugin, p.id, e.currentTarget.value)} />
+            <input id={`p-${p.id}`} class="heure" type="time" value={String(valeurs[p.id])} onchange={(e) => e.currentTarget.value && definir(p.id, e.currentTarget.value)} />
           {:else if p.type === "boolean"}
-            <Switch checked={valeurs[p.id] === true} label={p.label} onchange={(v) => parametres.definir(plugin, p.id, v)} />
+            <Switch checked={valeurs[p.id] === true} label={p.label} onchange={(v) => definir(p.id, v)} />
           {:else}
-            <select id={`p-${p.id}`} value={String(valeurs[p.id])} onchange={(e) => parametres.definir(plugin, p.id, e.currentTarget.value)}>
+            <select id={`p-${p.id}`} value={String(valeurs[p.id])} onchange={(e) => definir(p.id, e.currentTarget.value)}>
               {#each p.options as option (option.value)}<option value={option.value}>{option.label}</option>{/each}
             </select>
           {/if}
+          <span class="coche" class:on={enregistre === p.id} aria-live="polite">{enregistre === p.id ? "✓" : ""}</span>
         </div>
       {/each}
     </div>
   {/each}
+  <p class="aide">Chaque réglage s'enregistre dès que vous le changez.</p>
   <div class="buttons">
-    <button class="btn" onclick={() => parametres.retablir(plugin)}>Rétablir les valeurs par défaut</button>
+    {#if confirmer}
+      <button class="btn primary" onclick={() => ((confirmer = false), parametres.retablir(plugin))}>Oui, tout remettre par défaut</button>
+      <button class="btn" onclick={() => (confirmer = false)}>Annuler</button>
+    {:else}
+      <button class="btn" onclick={() => (confirmer = true)}>Rétablir les valeurs par défaut…</button>
+    {/if}
   </div>
 </div>
 
@@ -92,7 +111,22 @@
     font-variant-numeric: tabular-nums;
   }
   .texte {
-    width: 220px;
+    width: min(340px, 45vw);
+  }
+  .coche {
+    width: 14px;
+    color: var(--ok);
+    font-weight: 700;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .coche.on {
+    opacity: 1;
+  }
+  .aide {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12.5px;
   }
   .heure {
     width: 120px;

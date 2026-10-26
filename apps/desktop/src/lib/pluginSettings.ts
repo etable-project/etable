@@ -1,3 +1,4 @@
+import { distribution } from "./distribution";
 import { getPlugin } from "./plugins/registry.svelte";
 import { settings } from "./state/settings.svelte";
 import { tabs } from "./state/tabs.svelte";
@@ -12,6 +13,8 @@ export const pluginSection = (pluginId: string, pageId: string) => `plugin:${plu
  * installé, activé ou n'a pas de page de réglages, la page des plugins s'ouvre à la place.
  */
 export function openPluginSettings(pluginId: string, hash?: string): void {
+  // « trajets » : la section du moteur (domiciles, GPS, clé TomTom), que les plugins de trajets ouvrent depuis leur page.
+  if (pluginId === "trajets" && distribution.trajets) return tabs.navigate({ kind: "settings", section: "trajets" });
   const plugin = getPlugin(pluginId);
   // Les paramètres déclarés (faits par le moteur) d'abord, sinon la première page de réglages que le plugin ajoute.
   const page = plugin?.parameters.length ? { id: "parametres" } : plugin?.settings[0];
