@@ -20,6 +20,7 @@ import {
   type AiImage,
   type AiResult,
   type RouteResult,
+  type RouteHomes,
   type RemoteResult,
   type WidgetSummary,
   type Reminder,
@@ -60,6 +61,7 @@ export type {
   AiImage,
   AiResult,
   RouteResult,
+  RouteHomes,
   RemoteResult,
   WidgetSummary,
   WidgetCases,
@@ -177,7 +179,9 @@ export interface Etabli<T> {
     resume(resume: WidgetSummary): void;
   };
   readonly trajets: {
-    calculer(options: { vers: string; depuis?: string; arriveeAvant?: number }): Promise<RouteResult>;
+    calculer(options: { vers: string; depuis?: string; arriveeAvant?: number; departA?: number }): Promise<RouteResult>;
+    /** Les noms des domiciles réglés (jamais leurs adresses) ; vide si les trajets ne sont pas disponibles. */
+    domiciles(): Promise<RouteHomes>;
     ouvrirWaze(destination: string): void;
   };
   /**
@@ -266,7 +270,21 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
       });
       send({ type: "remote", id, outil, args: args === undefined ? {} : JSON.parse(JSON.stringify(args)) } as PluginToHost);
     });
-  const askRoute = (options: { vers: string; depuis?: string; arriveeAvant?: number }): Promise<RouteResult> =>
+  const pendingHomes = new Map<string, (result: RouteHomes) => void>();
+  const askHomes = (): Promise<RouteHomes> =>
+    new Promise((resolve) => {
+      const id = `d${++routeCounter}`;
+      const timer = setTimeout(() => {
+        pendingHomes.delete(id);
+        resolve({ domiciles: [], empreinte: "" });
+      }, 10_000);
+      pendingHomes.set(id, (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      });
+      send({ type: "routeHomes", id } as PluginToHost);
+    });
+  const askRoute = (options: { vers: string; depuis?: string; arriveeAvant?: number; departA?: number }): Promise<RouteResult> =>
     new Promise((resolve) => {
       const id = `t${++routeCounter}`;
       const timer = setTimeout(() => {
@@ -277,7 +295,7 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
         clearTimeout(timer);
         resolve(result);
       });
-      send({ type: "route", id, vers: options.vers, ...(options.depuis !== undefined ? { depuis: options.depuis } : {}), ...(options.arriveeAvant !== undefined ? { arriveeAvant: options.arriveeAvant } : {}) } as PluginToHost);
+      send({ type: "route", id, vers: options.vers, ...(options.depuis !== undefined ? { depuis: options.depuis } : {}), ...(options.arriveeAvant !== undefined ? { arriveeAvant: options.arriveeAvant } : {}), ...(options.departA !== undefined ? { departA: options.departA } : {}) } as PluginToHost);
     });
 
   const pendingAi = new Map<string, (result: AiResult) => void>();
@@ -442,6 +460,7 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
     },
     trajets: {
       calculer: (options) => askRoute(options),
+      domiciles: () => askHomes(),
       ouvrirWaze: (destination) => send({ type: "openMap", destination: String(destination) }),
     },
     distant: {
@@ -505,6 +524,12 @@ function start(port: MessagePort, resolve: (api: Etabli<unknown>) => void): void
       case "routeResult": {
         const fini = pendingRoutes.get(message.id);
         pendingRoutes.delete(message.id);
+        fini?.(message.result);
+        break;
+      }
+      case "routeHomesResult": {
+        const fini = pendingHomes.get(message.id);
+        pendingHomes.delete(message.id);
         fini?.(message.result);
         break;
       }
