@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { departCourant, erreurHttp, GPS, lireAdresseTrouvee, lireConfigTrajets, lireCoordonnees, lirePosition, lireTrajet, nettoyerAdresse, RAYON_PROCHE_M, urlGeocodage, urlRecherche, urlTrajet, urlWaze } from "./trajetsPur";
+import { departCourant, empreinteDomiciles, erreurHttp, lireAdresseTrouvee, lireConfigTrajets, lireCoordonnees, lirePosition, lireTrajet, nettoyerAdresse, RAYON_PROCHE_M, urlGeocodage, resoudreAdresse, urlRecherche, urlTrajet, urlWaze } from "./trajetsPur";
 
 describe("trajets", () => {
   it("lit une configuration en refusant une clé douteuse", () => {
@@ -7,7 +7,7 @@ describe("trajets", () => {
     expect(lireConfigTrajets({ cle: "trop" }).cle).toBe("");
     // Copié depuis une page web : espace insécable, caractère invisible, retour à la ligne, guillemets.
     expect(lireConfigTrajets({ cle: "\u00a0\"AbCd\u200bEf12 34567\"\n" }).cle).toBe("AbCdEf1234567");
-    expect(lireConfigTrajets(null)).toEqual({ cle: "", depart: "", sansPeage: false, domiciles: [], actuel: "", pays: "FR" });
+    expect(lireConfigTrajets(null)).toEqual({ cle: "", depart: "", sansPeage: false, domiciles: [], principal: "", pays: "FR" });
   });
   it("lit la position et le trajet rendus par TomTom", () => {
     expect(lirePosition({ results: [{ position: { lat: 48.8, lon: 2.3 } }] })).toEqual({ lat: 48.8, lon: 2.3 });
@@ -21,6 +21,7 @@ describe("trajets", () => {
     expect(urlTrajet("k", a, a, 0)).toContain("traffic=true");
     expect(urlTrajet("k", a, a, 0, undefined, true)).toContain("avoid=tollRoads");
     expect(urlTrajet("k", a, a, 0)).not.toContain("avoid=");
+    expect(urlTrajet("k", a, a, 0, undefined, false, Date.UTC(2030, 0, 1, 17))).toContain("departAt=2030-01-01T17%3A00%3A00.000Z");
   });
   it("traduit les erreurs et construit le lien Waze", () => {
     expect(erreurHttp(403)).toMatchObject({ ok: false, code: "refuse" });
@@ -33,10 +34,16 @@ describe("trajets", () => {
       const c = lireConfigTrajets({ cle: "abcdefghij1234", depart: "103 Route des crêtes, Castetner" });
       expect(c.domiciles).toEqual([{ nom: "Domicile", adresse: "103 Route des crêtes, Castetner" }]);
       expect(departCourant(c)).toBe("103 Route des crêtes, Castetner");
-      const d = lireConfigTrajets({ ...c, domiciles: [...c.domiciles, { nom: "Mamie", adresse: "Bayonne" }], actuel: "Mamie" });
+      const d = lireConfigTrajets({ ...c, domiciles: [...c.domiciles, { nom: "Mamie", adresse: "Bayonne" }], principal: "Mamie" });
+      expect(lireConfigTrajets({ domiciles: d.domiciles, actuel: "Mamie" }).principal).toBe("Mamie");
+      expect(d.principal).toBe("Mamie");
       expect(departCourant(d)).toBe("Bayonne");
-      expect(departCourant({ ...d, actuel: GPS })).toBe(GPS);
-      expect(lireConfigTrajets({ ...d, actuel: "Inconnu" }).actuel).toBe("Domicile");
+      expect(lireConfigTrajets({ ...d, principal: "Inconnu" }).principal).toBe("Domicile");
+      expect(lireConfigTrajets({ ...c, actuel: "gps" }).principal).toBe("Domicile");
+      expect(resoudreAdresse(d, "domicile:Domicile")).toBe("103 Route des crêtes, Castetner");
+      expect(resoudreAdresse(d, "domicile:")).toBe("Bayonne");
+      expect(resoudreAdresse(d, "Armar Anglet")).toBe("Armar Anglet");
+      expect(empreinteDomiciles(d)).not.toBe(empreinteDomiciles({ ...d, domiciles: [{ nom: "Mamie", adresse: "Biarritz" }] }));
     });
     it("cherche en France, près du départ, et lit des coordonnées", () => {
       expect(urlGeocodage("k", "Armar Anglet", "FR", { lat: 43.4, lon: -1.5 })).toContain("countrySet=FR&lat=43.4&lon=-1.5");

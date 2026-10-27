@@ -19,7 +19,7 @@
   import { traiterRappels } from "$lib/mobile/rappelsHote";
   import { frameShortcuts } from "$lib/shortcuts";
   import { sandboxDe, lireTheme } from "$lib/plugins/cadre";
-  import { calculerTrajet, urlWaze } from "$lib/trajets";
+  import { calculerTrajet, domicilesPourPlugin, urlWaze } from "$lib/trajets";
   import { appelerDistant } from "$lib/distant";
   import { controler, erreurService, idAppel, type Contexte } from "$lib/plugins/garde";
   import { connues, estStrict } from "$lib/plugins/permissions";
@@ -166,11 +166,14 @@
           // Permission « trajets » déjà contrôlée par la garde ; seul l'hôte connaît la clé TomTom et parle au service.
           const id = message.id;
           const reponse = distribution.trajets
-            ? calculerTrajet({ vers: message.vers, depuis: message.depuis, arriveeAvant: message.arriveeAvant })
+            ? calculerTrajet({ vers: message.vers, depuis: message.depuis, arriveeAvant: message.arriveeAvant, departA: message.departA })
             : Promise.resolve<RouteResult>({ ok: false, code: "non_configure", message: "Les trajets ne sont pas disponibles dans cette application." });
           void reponse.then((result) => send({ type: "routeResult", id, result }));
           break;
         }
+        case "routeHomes":
+          send({ type: "routeHomesResult", id: message.id, result: distribution.trajets ? domicilesPourPlugin() : { domiciles: [], empreinte: "" } });
+          break;
         case "openMap":
           void system.openUrl(urlWaze(message.destination));
           break;

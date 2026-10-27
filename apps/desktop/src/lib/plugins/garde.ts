@@ -155,6 +155,7 @@ const PERMISSION_REQUISE: Record<string, string | null> = {
   reminders: "notifications",
   ai: "ia",
   route: "trajets",
+  routeHomes: "trajets",
   remote: "distant",
   openMap: null,
   widgetSummary: null,
@@ -277,7 +278,19 @@ export function controler(brut: unknown, ctx: Contexte): Verdict {
         if (!estTexte(brut.vers, 200) || brut.vers.trim() === "") return refus("adresse d'arrivée vide ou trop longue");
         if (brut.depuis !== undefined && (!estTexte(brut.depuis, 200) || brut.depuis.trim() === "")) return refus("adresse de départ vide ou trop longue");
         if (brut.arriveeAvant !== undefined && !(typeof brut.arriveeAvant === "number" && Number.isFinite(brut.arriveeAvant))) return refus("heure d'arrivée invalide");
-        return bon({ type, id: brut.id, vers: brut.vers, ...(brut.depuis !== undefined ? { depuis: brut.depuis } : {}), ...(brut.arriveeAvant !== undefined ? { arriveeAvant: brut.arriveeAvant } : {}) });
+        if (brut.departA !== undefined && !(typeof brut.departA === "number" && Number.isFinite(brut.departA))) return refus("heure de départ invalide");
+        return bon({
+          type,
+          id: brut.id,
+          vers: brut.vers,
+          ...(brut.depuis !== undefined ? { depuis: brut.depuis } : {}),
+          ...(brut.arriveeAvant !== undefined ? { arriveeAvant: brut.arriveeAvant } : {}),
+          ...(brut.departA !== undefined ? { departA: brut.departA } : {}),
+        });
+      }
+      case "routeHomes": {
+        if (!estTexte(brut.id, 64) || !ID_APPEL.test(brut.id)) return refus("identifiant de demande invalide");
+        return bon({ type, id: brut.id });
       }
       case "widgetSummary": {
         const r = estObjet(brut.resume) ? brut.resume : null;

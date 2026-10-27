@@ -9,8 +9,8 @@ export interface ConfigTrajets {
   sansPeage: boolean;
   /** Mes domiciles (chez maman, chez mamie…), réglés ici une fois pour toutes. */
   domiciles: Domicile[];
-  /** D'où partent les trajets : le nom d'un domicile, ou « gps » (la position du téléphone ou du PC au moment du calcul). */
-  actuel: string;
+  /** Le domicile principal (son nom) : là où je suis quand je ne suis pas en mission ; les trajets en partent par défaut. */
+  principal: string;
   /** Pays où chercher les adresses (code ISO, « FR ») : évite qu'une adresse courte soit trouvée à l'autre bout du monde. */
   pays: string;
 }
@@ -20,13 +20,32 @@ export interface Domicile {
   adresse: string;
 }
 
-export const GPS = "gps";
-export const CONFIG_TRAJETS_DEFAUT: ConfigTrajets = { cle: "", depart: "", sansPeage: false, domiciles: [], actuel: "", pays: "FR" };
+export const CONFIG_TRAJETS_DEFAUT: ConfigTrajets = { cle: "", depart: "", sansPeage: false, domiciles: [], principal: "", pays: "FR" };
 
-/** Le point de départ des trajets : l'adresse du domicile choisi, « gps », ou l'ancienne adresse de départ. */
+/** Un plugin désigne un domicile sans connaître son adresse : « domicile:Chez mamie », ou « domicile: » pour le domicile principal. */
+export const DOMICILE = "domicile:";
+
+/** Le point de départ par défaut : l'adresse du domicile principal (ou l'ancienne adresse de départ). */
 export function departCourant(c: ConfigTrajets): string {
-  if (c.actuel === GPS) return GPS;
-  return c.domiciles.find((d) => d.nom === c.actuel)?.adresse ?? c.domiciles[0]?.adresse ?? c.depart;
+  return c.domiciles.find((d) => d.nom === c.principal)?.adresse ?? c.domiciles[0]?.adresse ?? c.depart;
+}
+
+/** « domicile:Nom » → l'adresse de ce domicile (le principal s'il est inconnu) ; toute autre adresse reste telle quelle. */
+export function resoudreAdresse(c: ConfigTrajets, texte: string): string {
+  if (!texte.startsWith(DOMICILE)) return texte;
+  const nom = texte.slice(DOMICILE.length).trim();
+  return c.domiciles.find((d) => d.nom === nom)?.adresse ?? departCourant(c);
+}
+
+/**
+ * Empreinte des domiciles et des options : un plugin la garde avec ses trajets calculés et recalcule tout dès qu'elle change (une adresse
+ * corrigée, un autre domicile principal). Ne révèle rien des adresses.
+ */
+export function empreinteDomiciles(c: ConfigTrajets): string {
+  const t = JSON.stringify([c.domiciles, c.principal, c.sansPeage, c.pays]);
+  let h = 0x811c9dc5;
+  for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 0x01000193) >>> 0;
+  return h.toString(36);
 }
 
 const texteCourt = (v: unknown, max: number): string => (typeof v === "string" ? v.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, max) : "");
@@ -53,9 +72,11 @@ export function lireConfigTrajets(brut: unknown): ConfigTrajets {
     .slice(0, 10);
   // Ancienne configuration : l'adresse de départ devient le premier domicile.
   if (domiciles.length === 0 && depart) domiciles = [{ nom: "Domicile", adresse: depart }];
-  const actuel = typeof o?.actuel === "string" && (o.actuel === GPS || domiciles.some((d) => d.nom === o.actuel)) ? o.actuel : (domiciles[0]?.nom ?? "");
+  // `actuel` : l'ancien « d'où je pars » (un domicile ou « gps ») devient le domicile principal.
+  const voulu = typeof o?.principal === "string" ? o.principal : o?.actuel;
+  const principal = typeof voulu === "string" && domiciles.some((d) => d.nom === voulu) ? voulu : (domiciles[0]?.nom ?? "");
   const pays = typeof o?.pays === "string" && /^[A-Z]{2}$/.test(o.pays) ? o.pays : "FR";
-  return { cle: /^[A-Za-z0-9._-]{10,200}$/.test(cle) ? cle : "", depart, sansPeage: o?.sansPeage === true, domiciles, actuel, pays };
+  return { cle: /^[A-Za-z0-9._-]{10,200}$/.test(cle) ? cle : "", depart, sansPeage: o?.sansPeage === true, domiciles, principal, pays };
 }
 
 /** Géocodage dans le pays choisi, en préférant les résultats proches du point de départ s'il est connu. */
@@ -101,10 +122,11 @@ export function lirePosition(json: unknown): { lat: number; lon: number } | null
 
 /**
  * Trajet en voiture avec la circulation. `arriveeAvant` (instant, ms) : l'heure à laquelle il faut être arrivé, si elle est à venir ;
- * sinon on part maintenant.
+ * sinon `departA` (partir à cet instant, s'il est à venir) ; sinon on part maintenant.
  */
-export function urlTrajet(cle: string, a: { lat: number; lon: number }, b: { lat: number; lon: number }, maintenant: number, arriveeAvant?: number, sansPeage = false): string {
-  const quand = arriveeAvant !== undefined && arriveeAvant > maintenant + 60_000 ? `arriveAt=${encodeURIComponent(new Date(arriveeAvant).toISOString())}` : "departAt=now";
+export function urlTrajet(cle: string, a: { lat: number; lon: number }, b: { lat: number; lon: number }, maintenant: number, arriveeAvant?: number, sansPeage = false, departA?: number): string {
+  const aVenir = (t: number | undefined): t is number => t !== undefined && t > maintenant + 60_000;
+  const quand = aVenir(arriveeAvant) ? `arriveAt=${encodeURIComponent(new Date(arriveeAvant).toISOString())}` : aVenir(departA) ? `departAt=${encodeURIComponent(new Date(departA).toISOString())}` : "departAt=now";
   return `${TOMTOM}/routing/1/calculateRoute/${a.lat},${a.lon}:${b.lat},${b.lon}/json?key=${encodeURIComponent(cle)}&traffic=true&travelMode=car&${quand}${sansPeage ? "&avoid=tollRoads" : ""}`;
 }
 

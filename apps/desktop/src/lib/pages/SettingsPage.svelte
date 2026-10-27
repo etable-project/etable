@@ -61,7 +61,7 @@
     trajets: {
       label: "Trajets et domiciles",
       title: "Trajets et domiciles",
-      lead: "Vos domiciles, votre position GPS et votre clé TomTom : tous les trajets de l'agenda partent d'ici, avec la circulation.",
+      lead: "Vos domiciles (dont le principal) et votre clé TomTom : les trajets de l'agenda en partent, avec la circulation.",
     },
     distant: {
       label: distribution.distant?.nom ?? "Service distant",
