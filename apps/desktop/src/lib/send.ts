@@ -26,3 +26,9 @@ export function sendToApp(kind: string, data: unknown, from: string): void {
   pending.set(tabId, { kind, data, from });
   ui.notify(`Envoyé vers « ${target.page.title} »`);
 }
+
+/** Ouvre une page (écran recréé) en lui donnant des données, comme un envoi : la colonne ouvre ainsi une conversation. */
+export function openWith(pluginId: string, pageId: string, incoming: Incoming): void {
+  const tabId = tabs.openFresh({ kind: "page", pluginId, pageId });
+  pending.set(tabId, incoming);
+}

@@ -4,6 +4,7 @@
   import { categorieDe, grouper } from "$lib/categories";
   import { distribution } from "$lib/distribution";
   import { appelerDistant } from "$lib/distant";
+  import { openWith } from "$lib/send";
   import { allPages, pageKey, type PageRef } from "$lib/plugins/registry.svelte";
   import { shortcutHint } from "$lib/shortcuts";
   import { settings } from "$lib/state/settings.svelte";
@@ -23,7 +24,7 @@
       return index < 0 ? Number.MAX_SAFE_INTEGER : index;
     };
     return allPages()
-      .filter((p) => settings.isPluginEnabled(p.plugin.id))
+      .filter((p) => settings.isPluginEnabled(p.plugin.id) && `${p.plugin.id}/${p.page.id}` !== distribution.accueil)
       .map((ref, index) => ({ ref, index, key: pageKey(ref.plugin.id, ref.page.id) }))
       .sort((a, b) => rank(a.key) - rank(b.key) || a.index - b.index);
   });
@@ -41,7 +42,7 @@
   let menu = $state<{ x: number; y: number } | null>(null);
   let editeur = $state<{ nouveau: boolean } | null>(null);
   function ouvrirMenu(event: MouseEvent): void {
-    if (ui.compact) return;
+    if (ui.compact || imposee) return;
     event.preventDefault();
     menu = { x: Math.min(event.clientX, window.innerWidth - 220), y: Math.min(event.clientY, window.innerHeight - 140) };
   }
@@ -49,6 +50,10 @@
     menu = null;
     action();
   }
+  /** Colonne imposée par la distribution : ses groupes de pages, dans son ordre (ni glisser, ni groupes à modifier). */
+  const imposee = $derived(
+    distribution.colonne?.map((g) => g.flatMap((cle) => pages.filter((p) => `${p.ref.plugin.id}/${p.ref.page.id}` === cle))).filter((g) => g.length) ?? null,
+  );
   /** Ordre d'affichage des pages : celui de la colonne, catégories comprises. */
   const ordreAffiche = $derived(settings.sidebarCategories ? groupes.flatMap((g) => g.items.map((p) => p.key)) : pages.map((p) => p.key));
   let nav: HTMLElement;
@@ -58,7 +63,7 @@
 
   function startDrag(event: PointerEvent, id: string): void {
     // Au doigt, glisser fait défiler la liste : pas de réorganisation en mode compact.
-    if (event.button !== 0 || ui.compact) return;
+    if (event.button !== 0 || ui.compact || imposee) return;
     drag = { id, startY: event.clientY, moved: false };
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
   }
@@ -132,6 +137,45 @@
   function ouvrirConversation(event: MouseEvent): void {
     const [pluginId, pageId] = (rapide?.page ?? "").split("/");
     if (pluginId && pageId) go({ kind: "page", pluginId, pageId }, event);
+  }
+
+  // Conversations de la distribution (distribution.conversations), rangées comme dans Claude : par catégorie, avec « + ».
+  type Conv = { id: number; titre: string; agents: string[]; element: boolean };
+  const convs = distribution.conversations;
+  let conversations = $state<Conv[]>([]);
+  let convOuverte = $state<number | null>(null);
+  async function chargerConversations(): Promise<void> {
+    if (!convs) return;
+    const r = await appelerDistant(convs.outil, {});
+    if (!r.ok) return;
+    try {
+      conversations = JSON.parse(r.texte) as Conv[];
+    } catch {
+      /* réponse illisible : on garde la liste d'avant */
+    }
+  }
+  $effect(() => {
+    if (!convs) return;
+    void chargerConversations();
+    const t = setInterval(() => void chargerConversations(), 15000);
+    return () => clearInterval(t);
+  });
+  const joli = (n: string) => n.charAt(0).toUpperCase() + n.slice(1);
+  const titreConv = (c: Conv) => c.titre || c.agents.map(joli).join(", ") || "Conversation";
+  const categoriesConv = $derived(
+    [
+      { nom: "Épinglée", liste: conversations.filter((c) => c.element) },
+      { nom: "Avec un agent", liste: conversations.filter((c) => !c.element && c.agents.length <= 1) },
+      { nom: "À plusieurs", liste: conversations.filter((c) => !c.element && c.agents.length > 1) },
+    ].filter((g) => g.liste.length),
+  );
+  const convPage = $derived(convs ? convs.page.split("/") : ["", ""]);
+  const surConversations = $derived(view?.kind === "page" && view.pluginId === convPage[0] && view.pageId === convPage[1]);
+  function ouvrirConv(data: { id: number } | { nouvelle: true }): void {
+    ui.menuOpen = false;
+    convOuverte = "id" in data ? data.id : null;
+    openWith(convPage[0]!, convPage[1]!, { kind: "conversation", data, from: "colonne" });
+    setTimeout(() => void chargerConversations(), 1500);
   }
 
   const preventAutoscroll = (e: MouseEvent) => e.button === 1 && e.preventDefault();
@@ -240,14 +284,21 @@
         onpointermove={moveDrag}
         onpointerup={endDrag}
         onpointercancel={endDrag}
-        title={`${ref.page.title} (glisser pour déplacer)`}
+        title={imposee ? ref.page.title : `${ref.page.title} (glisser pour déplacer)`}
       >
         <Tile color={ref.plugin.color} icon={ref.page.icon} />
         <span class="label">{ref.page.title}</span>
       </button>
     {/snippet}
 
-    {#if settings.sidebarCategories}
+    {#if imposee}
+      {#each imposee as g, gi (gi)}
+        {#if gi > 0}<div class="espace-groupe"></div>{/if}
+        {#each g as { ref, key } (key)}
+          {@render entree(ref, key, false)}
+        {/each}
+      {/each}
+    {:else if settings.sidebarCategories}
       {#each groupes as g (g.name)}
         {@const replie = settings.foldedCategories.includes(g.name)}
         <div class="categorie" data-categorie={g.name}>
@@ -264,6 +315,20 @@
     {:else}
       {#each pages as { ref, key } (key)}
         {@render entree(ref, key, false)}
+      {/each}
+    {/if}
+    {#if convs}
+      <div class="conv-tete">
+        <span class="conv-titre label">Conversations</span>
+        <button class="conv-nouvelle" onclick={() => ouvrirConv({ nouvelle: true })} title="Nouvelle conversation" aria-label="Nouvelle conversation">+</button>
+      </div>
+      {#each categoriesConv as g (g.nom)}
+        <div class="conv-cat label">{g.nom}</div>
+        {#each g.liste as c (c.id)}
+          <button class="conv label" class:active={surConversations && convOuverte === c.id} onclick={() => ouvrirConv({ id: c.id })} title={titreConv(c)}>
+            {c.element ? "📌 " : ""}{titreConv(c)}
+          </button>
+        {/each}
       {/each}
     {/if}
   </nav>
@@ -328,7 +393,71 @@
   .rapide {
     display: grid;
     gap: 4px;
-    padding: 8px 10px 0;
+    padding: 10px 10px 12px;
+  }
+  .espace-groupe {
+    height: 14px;
+    flex: none;
+  }
+  .conv-tete {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    flex: none;
+  }
+  .conv-titre {
+    padding: 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--faint);
+  }
+  .conv-nouvelle {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: var(--r-xs);
+    background: none;
+    color: var(--muted);
+    font-size: 18px;
+    line-height: 1;
+  }
+  .conv-nouvelle:hover {
+    background: var(--field);
+    color: var(--text);
+  }
+  .conv-cat {
+    padding: 8px 8px 2px;
+    font-size: 11.5px;
+    color: var(--faint);
+    white-space: nowrap;
+  }
+  .conv {
+    flex: none;
+    border: 0;
+    border-radius: var(--r-md);
+    background: none;
+    padding: 6px 8px;
+    text-align: left;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+  }
+  .conv:hover {
+    background: var(--field);
+  }
+  .conv.active {
+    background: var(--surface);
+    box-shadow: 0 0 0 1px var(--border);
+  }
+  .collapsed .conv-tete,
+  .collapsed .conv-cat,
+  .collapsed .conv {
+    display: none;
   }
   .rapide input {
     width: 100%;
@@ -349,14 +478,19 @@
     color: var(--danger, #d9534f);
   }
   .rapide-btn {
-    margin: 8px auto 0;
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--surface);
+    margin: 8px auto;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    border-radius: var(--r-md);
+    background: none;
     cursor: pointer;
     font-size: 16px;
+  }
+  .rapide-btn:hover {
+    background: var(--field);
   }
   .side {
     position: relative;
@@ -663,6 +797,14 @@
   .collapsed.folded .item .label,
   .collapsed.folded .brand .label {
     display: none;
+  }
+  /* Repliée : chaque entrée est un carré centré dans la colonne, l'icône pile au milieu de son fond. */
+  .collapsed.folded .item {
+    width: 48px;
+    padding: 0;
+    gap: 0;
+    justify-content: center;
+    align-self: center;
   }
 
   .resizer {
