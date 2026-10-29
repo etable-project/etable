@@ -52,6 +52,14 @@ describe("lireDistribution", () => {
     expect(lireDistribution({ logoViewBox: "0 0 1e9 <x>" }).logoViewBox).toBe("0 0 24 24");
   });
 
+  it("lit l'accueil, la colonne imposée et les conversations de la colonne", () => {
+    const d = lireDistribution({ accueil: "harnais/accueil", colonne: [["cerveau/carte", "../x"], [], ["agents/agents"]], conversations: { outil: "agl_conversations", page: "harnais/conversations" } });
+    expect(d.accueil).toBe("harnais/accueil");
+    expect(d.colonne).toEqual([["cerveau/carte"], ["agents/agents"]]);
+    expect(d.conversations).toEqual({ outil: "agl_conversations", page: "harnais/conversations" });
+    expect(lireDistribution({ accueil: "pas bon", colonne: "x", conversations: { outil: "x" } })).toMatchObject({ accueil: null, colonne: null, conversations: null });
+  });
+
   it("la page Plugins reste visible tant qu'on ne la retire pas explicitement", () => {
     expect(lireDistribution({ pluginsPage: "non" }).pluginsPage).toBe(true);
     expect(lireDistribution({}).pluginsPage).toBe(true);

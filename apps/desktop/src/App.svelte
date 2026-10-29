@@ -113,6 +113,8 @@
     return JSON.stringify(v);
   }
   /** Téléphone : l'accueil est la liste des pages ; une page s'ouvre en plein écran et le geste « retour » d'Android y revient. */
+  /** Accueil de la distribution : la page d'un plugin à la place du tableau d'Établi. */
+  const accueilPage = distribution.accueil?.split("/") as [string, string] | undefined;
   const accueilMobile = $derived(ui.compact && view?.kind === "home");
   let entreeHistorique = false;
   $effect(() => {
@@ -167,6 +169,8 @@
         <div class="view">
           {#if accueilMobile}
             <MobileAccueil />
+          {:else if view?.kind === "home" && accueilPage}
+            <PagePage tabId={tabs.activeId} pluginId={accueilPage[0]} pageId={accueilPage[1]} />
           {:else if view?.kind === "home"}
             <Home />
           {:else if view?.kind === "page"}
