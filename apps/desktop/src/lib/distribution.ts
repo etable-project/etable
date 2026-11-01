@@ -37,9 +37,17 @@ ull : pas de mise à jour sur Android. */
   /** Message rapide dans la colonne : un champ qui envoie le texte à un outil du service distant (`{ text }`). Colonne repliée :
    * un bouton qui ouvre la page de la conversation (« plugin/page »). Demande `distant`. */
   messageRapide: { titre: string; outil: string; page: string | null } | null;
+  /** Page d'un plugin (« plugin/page ») qui sert d'accueil : l'entrée Accueil l'affiche, et elle n'est plus listée à part. */
+  accueil: string | null;
+  /** Colonne imposée : des groupes de pages (« plugin/page »), séparés par un espace, dans cet ordre ; les autres pages
+   * n'y sont pas, et l'ordre ne se change plus à la souris. `null` : l'ordre choisi par l'utilisateur. */
+  colonne: string[][] | null;
+  /** Conversations listées dans la colonne, rangées par catégorie, avec « + Nouvelle » : `outil` (service distant) rend la
+   * liste, `page` (« plugin/page ») les ouvre (données `conversation` : `{ id }`, ou `{ nouvelle: true }`). */
+  conversations: { outil: string; page: string } | null;
 }
 
-export const DISTRIBUTION_DEFAUT: Distribution = { name: "Établi", pluginsPage: true, themes: null, logo: null, logoPlein: false, logoViewBox: "0 0 24 24", accueilCouleur: null, apercu: "favoris", ia: false, trajets: false, distant: null, tabs: true, icons: {}, tuilesNues: false, androidUpdateUrl: null, messageRapide: null };
+export const DISTRIBUTION_DEFAUT: Distribution = { name: "Établi", pluginsPage: true, themes: null, logo: null, logoPlein: false, logoViewBox: "0 0 24 24", accueilCouleur: null, apercu: "favoris", ia: false, trajets: false, distant: null, tabs: true, icons: {}, tuilesNues: false, androidUpdateUrl: null, messageRapide: null, accueil: null, colonne: null, conversations: null };
 
 const objet = (v: unknown): Record<string, unknown> | null => (typeof v === "object" && v !== null && !Array.isArray(v) ? (v as Record<string, unknown>) : null);
 const COULEUR = /^(#[0-9a-f]{3,8}|rgba?\([\d\s.,%]+\)|hsla?\([\d\s.,%deg]+\))$/i;
@@ -88,6 +96,21 @@ function lireMessageRapide(brut: unknown): Distribution["messageRapide"] {
   return { titre: typeof o.titre === "string" && o.titre.trim() ? o.titre.trim().slice(0, 40) : "Message", outil: o.outil, page };
 }
 
+const PAGE = /^[a-z0-9-]{1,40}\/[a-z0-9-]{1,40}$/;
+const page = (v: unknown): string | null => (typeof v === "string" && PAGE.test(v) ? v : null);
+
+function lireColonne(brut: unknown): Distribution["colonne"] {
+  if (!Array.isArray(brut)) return null;
+  const groupes = brut.slice(0, 10).map((g) => (Array.isArray(g) ? g.slice(0, 40).map(page).filter((p): p is string => p !== null) : [])).filter((g) => g.length);
+  return groupes.length ? groupes : null;
+}
+
+function lireConversations(brut: unknown): Distribution["conversations"] {
+  const o = objet(brut);
+  const p = page(o?.page);
+  return o && typeof o.outil === "string" && /^[a-z][a-z0-9_]{0,40}$/.test(o.outil) && p ? { outil: o.outil, page: p } : null;
+}
+
 export function lireDistribution(brut: unknown): Distribution {
   const o = objet(brut);
   if (!o) return { ...DISTRIBUTION_DEFAUT };
@@ -110,6 +133,9 @@ export function lireDistribution(brut: unknown): Distribution {
     icons: lireIcones(o.icons),
     tuilesNues: o.tuilesNues === true,
     messageRapide: lireMessageRapide(o.messageRapide),
+    accueil: page(o.accueil),
+    colonne: lireColonne(o.colonne),
+    conversations: lireConversations(o.conversations),
     androidUpdateUrl: typeof o.androidUpdateUrl === "string" && /^https:\/\/[^\s]{1,300}$/.test(o.androidUpdateUrl.trim()) ? o.androidUpdateUrl.trim() : null,
   };
 }

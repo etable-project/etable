@@ -81,6 +81,15 @@ class Tabs {
     return tab.id;
   }
 
+  /** Comme `open`, mais sans onglets la page est recréée même si c'est déjà celle affichée (pour lui donner des données). */
+  openFresh(view: View): number {
+    const tab = this.active;
+    if (distribution.tabs || !tab) return this.open(view);
+    if (!sameView(tab.view, view)) tab.history.push(withoutHash($state.snapshot(tab.view)));
+    tab.view = fresh(view);
+    return this.activeId;
+  }
+
   /** Bouton « + » et raccourci « Nouvel onglet » : comme un navigateur, un onglet neuf, prêt pour la recherche. */
   newTab(): void {
     ui.focusSearch = true;
